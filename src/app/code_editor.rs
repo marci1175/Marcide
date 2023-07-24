@@ -14,9 +14,10 @@ pub fn highlight(ctx: &egui::Context, theme: &CodeTheme, code: &str, language: &
 
     type HighlightCache = egui::util::cache::FrameCache<LayoutJob, Highlighter>;
 
-    let mut memory = ctx.memory();
-    let highlight_cache = memory.caches.cache::<HighlightCache>();
-    highlight_cache.get((theme, code, language))
+    ctx.memory_mut(|memory| {
+        let highlight_cache = memory.caches.cache::<HighlightCache>();
+        highlight_cache.get((theme, code, language))
+    })
 }
 
 // ----------------------------------------------------------------------------
@@ -107,13 +108,13 @@ impl CodeTheme {
 
     pub fn from_memory(ctx: &egui::Context) -> Self {
         if ctx.style().visuals.dark_mode {
-            ctx.data()
-                .get_persisted(egui::Id::new("dark"))
-                .unwrap_or_else(CodeTheme::dark)
+            ctx.data_mut(|data|{
+                data.get_persisted(egui::Id::new("dark")).unwrap_or_else(|| CodeTheme::dark())
+            })
         } else {
-            ctx.data()
-                .get_persisted(egui::Id::new("light"))
-                .unwrap_or_else(CodeTheme::light)
+            ctx.data_mut(|data|{
+                data.get_persisted(egui::Id::new("light")).unwrap_or_else(|| CodeTheme::light())
+            })
         }
     }
 }
@@ -228,15 +229,15 @@ fn as_byte_range(whole: &str, range: &str) -> std::ops::Range<usize> {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CodeEditor {
-    language: String,
+    pub language: String,
     pub code: String,
 }
 
 impl Default for CodeEditor {
     fn default() -> Self {
         Self {
-            language: "rs".into(),
-            code: "Hello world!".into(),
+            language: "py".into(),
+            code: "".into(),
         }
     }
 }
@@ -252,7 +253,8 @@ impl CodeEditor {
         let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
             let mut layout_job = highlight(ui.ctx(), &theme, string, language);
             layout_job.wrap.max_width = wrap_width;
-            ui.fonts().layout_job(layout_job)
+            //ui.fonts().layout_job(layout_job)
+            ui.fonts(|fonts| {fonts.layout_job(layout_job)})
         };
 
         let Rect { max, .. } = ui.max_rect();
@@ -270,7 +272,7 @@ impl CodeEditor {
 
         // get how many rows it takes to fill up our max rect
         let font_id = FontSelection::default().resolve(ui.style());
-        let row_height = ui.fonts().row_height(&font_id);
+        let row_height = ui.fonts(|fonts| {fonts.row_height(&font_id)});
         let rows = ((code_rect.height() - 5.0) / row_height).floor() as usize;
 
         let text_widget = egui::TextEdit::multiline(code)
