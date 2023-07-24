@@ -1,1 +1,1 @@
-This is a very simple notepad
+This is a very simple ide
