@@ -106,6 +106,7 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         //hotkeys
+        let has_focus = ctx.input(|i| i.focused);
         let ctrlimput = unsafe {
             GetAsyncKeyState(VK_CONTROL as i32)
         };
@@ -117,7 +118,7 @@ impl eframe::App for TemplateApp {
         let sis_pressed = (sinp as u16 & 0x8000) != 0;
 
         //save hotkey
-        if sis_pressed && ctrlis_pressed {
+        if sis_pressed && ctrlis_pressed && has_focus {
             if self.last_save_path.is_some() {
                 savetofile(self.last_save_path.clone(), self.text.clone());
             }
@@ -132,11 +133,6 @@ impl eframe::App for TemplateApp {
                     }
             }
         }
-
-
-
-
-
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
         //autosave implementation
