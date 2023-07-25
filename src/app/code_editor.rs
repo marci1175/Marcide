@@ -246,7 +246,7 @@ impl CodeEditor {
     pub fn show(&mut self, id: Id, ui: &mut egui::Ui, scroll_offset: Vec2) -> Vec2 {
         let Self { language, code } = self;
 
-        let frame_rect = ui.max_rect().shrink(6.0);
+        let frame_rect = ui.max_rect().shrink(0.0);
         let code_rect = frame_rect.shrink(5.0);
 
         let theme = CodeTheme::from_memory(ui.ctx());
@@ -259,7 +259,7 @@ impl CodeEditor {
 
         let Rect { max, .. } = ui.max_rect();
 
-        ui.allocate_space(vec2(max.x, max.y));
+        ui.allocate_space(ui.available_size());
 
         ui.painter().rect(
             frame_rect,
@@ -288,7 +288,7 @@ impl CodeEditor {
             .desired_rows(rows);
 
         let scroll_res = egui::ScrollArea::vertical()
-            .scroll_offset(scroll_offset)
+        .stick_to_bottom(true)
             .show(&mut frame_ui, |ui| {
                 ui.add(text_widget);
             });
