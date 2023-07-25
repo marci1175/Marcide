@@ -2,8 +2,9 @@ use std::sync::mpsc::{self};
 use std::path::PathBuf;
 use std::time::Duration;
 use rfd::FileDialog;
-
+use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
+use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
 use std::io::{Write, Read};
@@ -16,6 +17,8 @@ mod code_editor;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+    #[serde(skip)]
+    window_title: String,
     #[serde(skip)]
     settings_window_is_open: bool,
     auto_save: bool,
@@ -33,11 +36,13 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     session_started: chrono::DateTime<Utc>,
+
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            window_title: "Marcide".into(),
             session_started: Utc::now(),
             settings_window_is_open: false,
             auto_save: true,
@@ -96,7 +101,43 @@ fn savetofile(path : Option<PathBuf>, text : String){
     }
 }
 impl eframe::App for TemplateApp {
-    
+    fn on_close_event(&mut self) -> bool {
+        if !self.auto_save || self.last_save_path.is_none(){
+            //implement save warnings using winapi
+            unsafe{
+                match MessageBoxW(0,  w!("Do you want to save before qutting the application?"), w!("Save before quitting"), MB_ICONERROR | MB_YESNOCANCEL){
+                    //yes
+                    6 => {
+                        //save text then quit
+                        let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                        if files.clone().is_some(){
+                            self.last_save_path = files.clone();
+                            savetofile(files.clone(), self.text.clone());
+                            return true;
+                        }
+                        else {
+                            self.on_close_event();
+                        }
+                        
+                    },
+                    //no
+                    7 => {
+                        //quit
+                        return true;
+                    },
+                    //cancel
+                    2 => {
+                        return false;
+                    },
+                    _ => {}
+                };
+            }
+        }
+        true
+    }
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         
@@ -105,7 +146,17 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        
         //hotkeys
+        if let Some(wintitle) = self.last_save_path.clone(){
+            if let Some(file_name) = wintitle.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    self.window_title = format!("Marcide - {}", file_name_str.to_string());
+                }
+            }
+        }
+        
+        _frame.set_window_title(self.window_title.as_str());
         let has_focus = ctx.input(|i| i.focused);
         let ctrlimput = unsafe {
             GetAsyncKeyState(VK_CONTROL as i32)
