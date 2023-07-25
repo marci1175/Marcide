@@ -1,8 +1,9 @@
-use std::sync::mpsc::{self, TryRecvError};
+use std::sync::mpsc::{self};
 use std::path::PathBuf;
 use std::time::Duration;
 use rfd::FileDialog;
-use egui::{Sense, Ui};
+
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
 use std::io::{Write, Read};
@@ -104,8 +105,38 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        //easter egg
-        
+        //hotkeys
+        let ctrlimput = unsafe {
+            GetAsyncKeyState(VK_CONTROL as i32)
+        };
+        let ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
+        //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
+        let sinp = unsafe {
+             GetAsyncKeyState(VK_S as i32)
+        };
+        let sis_pressed = (sinp as u16 & 0x8000) != 0;
+
+        //save hotkey
+        if sis_pressed && ctrlis_pressed {
+            if self.last_save_path.is_some() {
+                savetofile(self.last_save_path.clone(), self.text.clone());
+            }
+            else {
+                let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                    if files.clone().is_some(){
+                        self.last_save_path = files.clone();
+                        savetofile(files.clone(), self.text.clone());
+                    }
+            }
+        }
+
+
+
+
+
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
         //autosave implementation
@@ -124,7 +155,8 @@ impl eframe::App for TemplateApp {
                 });
                 tx
             });
-            match tx.send(self.text.clone()){
+            
+            match tx.send(self.code_editor.code.clone()){
                 Ok(ok) => {ok},
                 Err(_) => {}
             };
@@ -174,7 +206,6 @@ impl eframe::App for TemplateApp {
                 if ui.button("Save as").clicked(){
                     let files = FileDialog::new()
                             .set_title("Save as")
-                            .add_filter("", &["txt"])
                             .set_directory("/")
                             .save_file();
                     if files.clone().is_some(){
@@ -209,7 +240,6 @@ impl eframe::App for TemplateApp {
                 ui.label(final_lenght.to_string() + " : Characters");
                 ui.separator();
                 let current_datetime = chrono::Utc::now();
-                let session_datetime = self.session_started;
                 let datetime_str = current_datetime.format("%H:%M:%S ").to_string();
                 let sessiondate_str = self.session_started.format("%H:%M:%S ").to_string();
                 ui.label(format!("Session started : {}", sessiondate_str));
