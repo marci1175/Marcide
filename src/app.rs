@@ -1,7 +1,7 @@
-use std::process::Output;
 use std::sync::mpsc::{self};
 use std::path::PathBuf;
 use std::time::Duration;
+use egui::{RichText, Color32};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
@@ -20,6 +20,12 @@ mod code_editor;
 #[serde(default)]
 pub struct TemplateApp {
     #[serde(skip)]
+    errout: String,
+    #[serde(skip)]
+    output: String,
+    #[serde(skip)]
+    output_window_is_open: bool,
+    #[serde(skip)]
     window_title: String,
     #[serde(skip)]
     settings_window_is_open: bool,
@@ -27,7 +33,6 @@ pub struct TemplateApp {
     #[serde(skip)]
     text: String,
     language: String,
-    #[serde(skip)]
     code_editor: CodeEditor,
     #[serde(skip)]
     last_save_path: Option<PathBuf>,
@@ -44,6 +49,9 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            errout: String::new(),
+            output: String::new(),
+            output_window_is_open: false,
             window_title: "Marcide".into(),
             session_started: Utc::now(),
             settings_window_is_open: false,
@@ -69,9 +77,13 @@ impl TemplateApp {
     }
 }
 fn mkdir(){
+    let mut command = String::new();
+    if let Some(home_dir) = home_dir() {
+        command = format!("mkdir {}\\%marcide.temp%", home_dir.display())
+    }
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")
-        .arg("mkdir %marcide.temp%")
+        .arg(command)
         .status();
     match cmdcomm {
         Ok(_) => {println!("Failed to excecute command!")}
@@ -79,24 +91,28 @@ fn mkdir(){
     }
 }
 fn rmdir() {
+    let mut command = String::new();
+    if let Some(home_dir) = home_dir() {
+        command = format!("rmdir /s /q {}\\%marcide.temp%", home_dir.display())
+    }
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")   
-        .arg("rmdir /s /q %marcide.temp%")    
+        .arg(command)    
         .status();
     match cmdcomm {
         Ok(_) => {println!("Failed to excecute command!")}
         Err(_) => {}
     }
 }
-fn runfile(path : Option<PathBuf>, language : String) -> String {
+fn runfile(path : Option<PathBuf>, language : String) -> std::process::Output {
     let command_to_be_excecuted = format!("{} {}",/*lang if first asked so we can decide which script compiler needs to be run ie: py test.py or lua test.lua */ language, path.unwrap().display());
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")   
         .arg(command_to_be_excecuted)    
         .output();
     match cmdcomm {
-        Ok(ok) => {format!("{:?}", ok)}
-        Err(_) => {unsafe { MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK) }; "Failed to find compiler".to_string()}
+        Ok(ok) => {println!("{:?}",ok); ok}
+        Err(_) => {unsafe { MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK) }; cmdcomm.unwrap()}
     }
 }
 fn count_lines(text: &str) -> usize {
@@ -116,10 +132,11 @@ fn openfile(path : Option<PathBuf>) -> String {
 }
 fn savetofile(path : Option<PathBuf>, text : String){
         if let Some(file_path) = path {
+            println!("{:?}", file_path);
             let mut file = OpenOptions::new()
                 .create(true)
                 .write(true)
-                .open(file_path.clone()).expect("WHAT");
+                .open(file_path.clone()).expect("wrong folder dumbass");
             // Write some data to the file
             match write!(file ,"{}", text){
                 Ok(_) => {},
@@ -218,6 +235,21 @@ impl eframe::App for TemplateApp {
         }
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
+        if self.output_window_is_open {
+            egui::Window::new("Output")
+            .open(&mut self.output_window_is_open)
+            .show(ctx, |ui| {
+                if self.output.len() != 0 {
+                    ui.label(RichText::from("Success").size(25.0).color(Color32::from_rgb(0, 255, 0)));
+                    ui.label(RichText::from(self.output.clone()).size(20.0).color(Color32::from_rgb(255, 255, 255)));
+                }
+                else {
+                    ui.label(RichText::from("Fail").size(25.0).color(Color32::from_rgb(255, 0, 0)));
+                    ui.label(RichText::from(self.errout.clone()).size(20.0).color(Color32::from_rgb(255, 255, 255)));
+                }
+                
+            });
+        } 
         //autosave implementation
         if self.last_save_path.is_some() {
             let place = self.last_save_path.clone();
@@ -255,7 +287,7 @@ impl eframe::App for TemplateApp {
                         ui.label("Autosave will only turn on after you have saved your file somewhere.");
                     }
                     ui.separator();
-                    ui.label(egui::RichText::from("Syntaxing").size(20.0));
+                    ui.label(egui::RichText::from("Programming language").size(20.0));
                     ui.text_edit_singleline(&mut self.language);
                     if self.language == "quaran" || self.language == "Quaran" || self.language == "Korán" || self.language == "korán" {
                         ui.hyperlink_to("Quaran", "https://mek.oszk.hu/06500/06534/06534.pdf");
@@ -293,13 +325,13 @@ impl eframe::App for TemplateApp {
                             //save file
                             savetofile(files.clone(), self.text.clone());
                             //run file
-                            egui::Window::new("Settings")
-                                .open(&mut true)
-                                .show(ctx, |ui| {
-                                    let output = runfile(files, self.language.clone());
-                                    ui.label(output);
-                                });
-                        
+                            self.output_window_is_open = true;
+                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                            
+                            if self.output.len() == 0{
+                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+                            }
+                                          
                         }
                     }
                     else {
@@ -367,7 +399,7 @@ impl eframe::App for TemplateApp {
         });
         egui::CentralPanel::default().show(ctx, |ui|{
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
-                    code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui, egui::vec2(0.0, 0.0));
+                    code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui);
                 });
                 
         });

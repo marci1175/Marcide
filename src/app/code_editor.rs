@@ -1,7 +1,8 @@
+
 // ----------------------------------------------------------------------------
 
 use egui::text::LayoutJob;
-use egui::{vec2, Color32, FontSelection, Id, Layout, Rect, Rounding, Stroke, Vec2};
+use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 
 /// Memoized Code highlighting
@@ -243,7 +244,7 @@ impl Default for CodeEditor {
 }
 
 impl CodeEditor {
-    pub fn show(&mut self, id: Id, ui: &mut egui::Ui, scroll_offset: Vec2) -> Vec2 {
+    pub fn show(&mut self, id: Id, ui: &mut egui::Ui) -> Vec2 {
         let Self { language, code } = self;
 
         let frame_rect = ui.max_rect().shrink(0.0);
@@ -256,8 +257,6 @@ impl CodeEditor {
             //ui.fonts().layout_job(layout_job)
             ui.fonts(|fonts| {fonts.layout_job(layout_job)})
         };
-
-        let Rect { max, .. } = ui.max_rect();
 
         ui.allocate_space(ui.available_size());
 
