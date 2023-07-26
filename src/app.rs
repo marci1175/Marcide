@@ -1,3 +1,4 @@
+use std::process::Output;
 use std::sync::mpsc::{self};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -48,7 +49,7 @@ impl Default for TemplateApp {
             settings_window_is_open: false,
             auto_save: true,
             text: String::new(),
-            language: "rs".into(),
+            language: "py".into(),
             code_editor: CodeEditor::default(),
             last_save_path: None,
             auto_save_interval: 15,
@@ -70,7 +71,7 @@ impl TemplateApp {
 fn mkdir(){
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")
-        .arg("mkdir marcide.temp")
+        .arg("mkdir %marcide.temp%")
         .status();
     match cmdcomm {
         Ok(_) => {println!("Failed to excecute command!")}
@@ -80,11 +81,22 @@ fn mkdir(){
 fn rmdir() {
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")   
-        .arg("rmdir /s /q marcide.temp")    
+        .arg("rmdir /s /q %marcide.temp%")    
         .status();
     match cmdcomm {
         Ok(_) => {println!("Failed to excecute command!")}
         Err(_) => {}
+    }
+}
+fn runfile(path : Option<PathBuf>, language : String) -> String {
+    let command_to_be_excecuted = format!("{} {}",/*lang if first asked so we can decide which script compiler needs to be run ie: py test.py or lua test.lua */ language, path.unwrap().display());
+    let cmdcomm = std::process::Command::new("cmd")
+        .arg("/C")   
+        .arg(command_to_be_excecuted)    
+        .output();
+    match cmdcomm {
+        Ok(ok) => {format!("{:?}", ok)}
+        Err(_) => {unsafe { MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK) }; "Failed to find compiler".to_string()}
     }
 }
 fn count_lines(text: &str) -> usize {
@@ -107,11 +119,7 @@ fn savetofile(path : Option<PathBuf>, text : String){
             let mut file = OpenOptions::new()
                 .create(true)
                 .write(true)
-                .open(file_path.clone())
-                .expect("Failed to open file");
-            
-            //pushback info
-            println!("\n{}\n", text);
+                .open(file_path.clone()).expect("WHAT");
             // Write some data to the file
             match write!(file ,"{}", text){
                 Ok(_) => {},
@@ -277,21 +285,26 @@ impl eframe::App for TemplateApp {
 
         
                             let random_number = rng.gen_range(1..=100000000);
-                            let to_push = format!("marcide.temp\\{}.{}", random_number, self.language);
+                            let to_push = format!("%marcide.temp%\\{}.{}", random_number, self.language);
                             home_dir.push(to_push);
                     
                             // Set the files variable
                             let files: Option<PathBuf> = Some(home_dir);
                             //save file
-                            savetofile(files, self.text.clone());
+                            savetofile(files.clone(), self.text.clone());
                             //run file
-                            
+                            egui::Window::new("Settings")
+                                .open(&mut true)
+                                .show(ctx, |ui| {
+                                    let output = runfile(files, self.language.clone());
+                                    ui.label(output);
+                                });
                         
                         }
                     }
                     else {
                         unsafe{
-                            MessageBoxW(0,  w!("This ide can only run .lua, and .py files out of box\nTroubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
+                            MessageBoxW(0,  w!("This ide can only run .lua, and .py files out of box"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
                         }
                     }
 
