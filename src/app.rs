@@ -2,7 +2,7 @@ use std::sync::mpsc::{self};
 use std::path::PathBuf;
 use std::time::Duration;
 use rfd::FileDialog;
-use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL};
+use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
 use windows_sys::w;
 use std::fs::OpenOptions;
@@ -10,7 +10,8 @@ use self::code_editor::CodeEditor;
 use std::io::{Write, Read};
 use std::fs::File;
 use chrono::Utc;
-
+use rand::Rng;
+use dirs::home_dir;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
  // if we add new fields, give them default values when deserializing old state
 mod code_editor;
@@ -66,6 +67,26 @@ impl TemplateApp {
         Default::default()
     }
 }
+fn mkdir(){
+    let cmdcomm = std::process::Command::new("cmd")
+        .arg("/C")
+        .arg("mkdir marcide.temp")
+        .status();
+    match cmdcomm {
+        Ok(_) => {println!("Failed to excecute command!")}
+        Err(_) => {}
+    }
+}
+fn rmdir() {
+    let cmdcomm = std::process::Command::new("cmd")
+        .arg("/C")   
+        .arg("rmdir /s /q marcide.temp")    
+        .status();
+    match cmdcomm {
+        Ok(_) => {println!("Failed to excecute command!")}
+        Err(_) => {}
+    }
+}
 fn count_lines(text: &str) -> usize {
     text.split('\n').count()
 }
@@ -102,6 +123,8 @@ fn savetofile(path : Option<PathBuf>, text : String){
 }
 impl eframe::App for TemplateApp {
     fn on_close_event(&mut self) -> bool {
+        //remove temp dir
+        rmdir();
         if !self.auto_save || self.last_save_path.is_none(){
             //implement save warnings using winapi
             unsafe{
@@ -146,6 +169,7 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        //make temp project directory
         
         //hotkeys
         if let Some(wintitle) = self.last_save_path.clone(){
@@ -195,8 +219,13 @@ impl eframe::App for TemplateApp {
                 std::thread::spawn(move || loop {
                     //reciver, text always gets updated
                     match rx.try_recv(){
-                        Ok(text) => {println!("RECV : {}", text);savetofile(place.clone(), text.clone())},
-                        Err(err) => {println!("{}", err)}
+                        Ok(text) => {
+                            println!("RECV : {}", text);
+                            savetofile(place.clone(), text.clone())
+                        },
+                        Err(err) => {
+                            println!("{}", err)
+                        }
                     };
                     std::thread::sleep(Duration::from_secs(15));
                 });
@@ -238,6 +267,35 @@ impl eframe::App for TemplateApp {
                 5. Bake ~30 minutes at 375 F 
             */
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui|{
+                if ui.button("Run").clicked() {
+                    if self.language == "py" || self.language == "lua" {
+                        //save to temp folder
+                        mkdir();
+                        //C:\Users\%user_name%\marcide.temp
+                        if let Some(mut home_dir) = home_dir() {
+                            let mut rng = rand::thread_rng();
+
+        
+                            let random_number = rng.gen_range(1..=100000000);
+                            let to_push = format!("marcide.temp\\{}.{}", random_number, self.language);
+                            home_dir.push(to_push);
+                    
+                            // Set the files variable
+                            let files: Option<PathBuf> = Some(home_dir);
+                            //save file
+                            savetofile(files, self.text.clone());
+                            //run file
+                            
+                        
+                        }
+                    }
+                    else {
+                        unsafe{
+                            MessageBoxW(0,  w!("This ide can only run .lua, and .py files out of box\nTroubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
+                        }
+                    }
+
+                }
                 if ui.button("Open").clicked() {
                     let files = FileDialog::new()
                         .set_title("Open")
