@@ -365,7 +365,15 @@ impl eframe::App for TemplateApp {
                     
                 }
                 if ui.button("Save").clicked(){
-                    if Some(self.last_save_path.clone()).is_some(){
+                    if self.last_save_path.clone().is_none(){
+                        let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                        self.last_save_path = files.clone();
+                        savetofile(self.last_save_path.clone(), self.text.clone())
+                    }
+                    else {
                         savetofile(self.last_save_path.clone(), self.text.clone())
                     }
                     
