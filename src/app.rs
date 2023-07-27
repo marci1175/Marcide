@@ -8,15 +8,16 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK
 use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
+
 use std::io::{Write, Read};
 use std::fs::File;
 use chrono::Utc;
 use rand::Rng;
-use stopwatch::{Stopwatch};
 use dirs::home_dir;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
  // if we add new fields, give them default values when deserializing old state
 mod code_editor;
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
@@ -27,9 +28,12 @@ pub struct TemplateApp {
     #[serde(skip)]
     output_window_is_open: bool,
     #[serde(skip)]
+    spotify_window_is_open: bool,
+    #[serde(skip)]
     window_title: String,
     #[serde(skip)]
     settings_window_is_open: bool,
+    auto_save_to_ram: bool,
     auto_save: bool,
     #[serde(skip)]
     text: String,
@@ -53,10 +57,12 @@ impl Default for TemplateApp {
             errout: String::new(),
             output: String::new(),
             output_window_is_open: false,
+            spotify_window_is_open: false,
             window_title: "Marcide".into(),
             session_started: Utc::now(),
             settings_window_is_open: false,
             auto_save: true,
+            auto_save_to_ram: false,
             text: String::new(),
             language: "py".into(),
             code_editor: CodeEditor::default(),
@@ -195,7 +201,9 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        //make temp project directory
+        if !self.auto_save_to_ram {
+            self.code_editor.code.clear();
+        }
         
         //hotkeys
         if let Some(wintitle) = self.last_save_path.clone(){
@@ -251,6 +259,13 @@ impl eframe::App for TemplateApp {
                 
             });
         } 
+        if self.spotify_window_is_open{
+            egui::Window::new("Spotify")
+            .open(&mut self.spotify_window_is_open)
+            .show(ctx, |ui|{
+
+            });
+        }
         //autosave implementation
         if self.last_save_path.is_some() {
             //define recv sender
@@ -284,9 +299,14 @@ impl eframe::App for TemplateApp {
                 .open(&mut self.settings_window_is_open)
                 .show(ctx, |ui| {
                     ui.label(egui::RichText::from("File handling").size(20.0));
-                    ui.checkbox(&mut self.auto_save, "Autosave");
+                    ui.checkbox(&mut self.auto_save, "Autosave to file");
                     if self.auto_save {
                         ui.label("Autosave will only turn on after you have saved your file somewhere.");
+                    }
+                    //this will enable/disable the savestate feature to codeeditor.code
+                    ui.checkbox(&mut self.auto_save_to_ram, "Autosave");
+                    if self.auto_save_to_ram {
+                        ui.label("This will save your text temporarily in the application. ");
                     }
                     ui.separator();
                     ui.label(egui::RichText::from("Programming language").size(20.0));
@@ -383,6 +403,10 @@ impl eframe::App for TemplateApp {
                 if ui.button("Settings").clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
+                /*if ui.button("Spotify").clicked(){
+                    self.spotify_window_is_open = true;
+                } */
+                
             });
             
         });
