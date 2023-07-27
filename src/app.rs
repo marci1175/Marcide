@@ -254,23 +254,19 @@ impl eframe::App for TemplateApp {
         //autosave implementation
         if self.last_save_path.is_some() {
             //define recv sender
-            let sw = Stopwatch::start_new();
-            let sw_elapsed = Stopwatch::elapsed_ms(&sw);
             let tx = self.autosave_sender.get_or_insert_with(||{
                 let (tx,rx) = mpsc::channel::<String>();
                 std::thread::spawn(move || loop {
-                    std::thread::sleep(Duration::from_millis(100));
                     //reciver, text always gets updated
                     match rx.try_recv(){
+                        
                         Ok(text) => {
-                            println!("RECV : {}", text);
-                            //sep over lines
                             let lines : Vec<&str> = text.lines().collect();
-                            println!("\n\n{}\n\n", lines[0]);
                             savetofile(Some(PathBuf::from(lines[1])), lines[0].to_string());
                             
                         },
                         Err(err) => {
+                            std::thread::sleep(Duration::from_micros(10));
                             println!("{}", err)
                         }
                     };
@@ -278,13 +274,10 @@ impl eframe::App for TemplateApp {
                 });
                 tx
             });
-            
-            if sw_elapsed % 15000 == 0 {
                 if let Some(path) = self.last_save_path.clone() {
                     let data_to_send : String = format!("{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string());
                     tx.send(data_to_send).expect("Unable to send msg");
                 }
-            }
         }
         if self.settings_window_is_open{
             egui::Window::new("Settings")
