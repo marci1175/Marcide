@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc;
 use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer};
 use rfd::FileDialog;
@@ -341,6 +341,14 @@ impl eframe::App for TemplateApp {
                     ui.text_edit_singleline(&mut self.language);
                     if self.language == "quaran" || self.language == "Quaran" || self.language == "Korán" || self.language == "korán" {
                         ui.hyperlink_to("Quaran", "https://mek.oszk.hu/06500/06534/06534.pdf");
+                    }
+                    if self.language == "marci1175" || self.language == "marci" || self.language == "Marci" || self.language == "Marcell" || self.language == "Varga Marcell" {
+                        ui.separator();
+                        ui.label("Credits");
+                        ui.separator();
+                        ui.label("Made by : Varga Marcell also known as marci1175 at 5111 days old");
+                        ui.label("Had so much fun developing this lol.");
+                        ui.hyperlink_to("Github", "https://github.com/marci1175");
                     }
                 });
         }
