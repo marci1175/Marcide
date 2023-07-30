@@ -13,10 +13,11 @@ use std::fs::File;
 use chrono::Utc;
 use rand::Rng;
 use dirs::home_dir;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
  // if we add new fields, give them default values when deserializing old state
 mod code_editor;
-
+mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
@@ -49,6 +50,8 @@ pub struct TemplateApp {
     session_started: chrono::DateTime<Utc>,
     #[serde(skip)]
     code_editor_text_lenght: usize,
+    #[serde(skip)]
+    discord_presence_is_running: bool,
 }
 
 impl Default for TemplateApp {
@@ -70,6 +73,7 @@ impl Default for TemplateApp {
             auto_save_interval: 15,
             autosave_sender: None,
             code_editor_text_lenght: 0,
+            discord_presence_is_running: false,
         }
     }
 }
@@ -202,7 +206,18 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let wintitl = self.window_title.clone();
+        if !self.discord_presence_is_running{
+            std::thread::spawn(move || loop {
+                //richpresence::main(wintitl.clone());
+            });
+            ctx.request_repaint();
+            self.discord_presence_is_running = true;
+        }
+        
+        
         //title logic for * when unsaved
+        
         if !self.auto_save_to_ram {
             self.code_editor.code.clear();
         }
