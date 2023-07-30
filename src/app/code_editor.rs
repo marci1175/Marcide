@@ -35,6 +35,7 @@ enum SyntectTheme {
 }
 
 impl SyntectTheme {
+    /*
     fn all() -> impl ExactSizeIterator<Item = Self> {
         [
             Self::Base16EightiesDark,
@@ -48,7 +49,7 @@ impl SyntectTheme {
         .iter()
         .copied()
     }
-
+    
     fn name(&self) -> &'static str {
         match self {
             Self::Base16EightiesDark => "Base16 Eighties (dark)",
@@ -60,7 +61,7 @@ impl SyntectTheme {
             Self::SolarizedLight => "Solarized (light)",
         }
     }
-
+     */
     fn syntect_key_name(&self) -> &'static str {
         match self {
             Self::Base16EightiesDark => "base16-eighties.dark",
@@ -72,7 +73,7 @@ impl SyntectTheme {
             Self::SolarizedLight => "Solarized (light)",
         }
     }
-
+    /*
     pub fn is_dark(&self) -> bool {
         match self {
             Self::Base16EightiesDark
@@ -83,6 +84,7 @@ impl SyntectTheme {
             Self::Base16OceanLight | Self::InspiredGitHub | Self::SolarizedLight => false,
         }
     }
+    */
 }
 
 #[derive(Clone, Hash, PartialEq, Deserialize, Serialize)]
@@ -99,6 +101,7 @@ impl Default for CodeTheme {
 }
 
 impl CodeTheme {
+    /*
     pub fn from_style(style: &egui::Style) -> Self {
         if style.visuals.dark_mode {
             Self::dark()
@@ -106,7 +109,7 @@ impl CodeTheme {
             Self::light()
         }
     }
-
+    */
     pub fn from_memory(ctx: &egui::Context) -> Self {
         if ctx.style().visuals.dark_mode {
             ctx.data_mut(|data|{

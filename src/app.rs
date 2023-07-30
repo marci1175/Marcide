@@ -1,7 +1,6 @@
 use std::sync::mpsc::{self};
 use std::path::PathBuf;
-use std::time::Duration;
-use egui::{RichText, Color32};
+use egui::{RichText, Color32, TextBuffer};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
@@ -48,7 +47,8 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     session_started: chrono::DateTime<Utc>,
-
+    #[serde(skip)]
+    code_editor_text_lenght: usize,
 }
 
 impl Default for TemplateApp {
@@ -69,6 +69,7 @@ impl Default for TemplateApp {
             last_save_path: None,
             auto_save_interval: 15,
             autosave_sender: None,
+            code_editor_text_lenght: 0,
         }
     }
 }
@@ -139,7 +140,6 @@ fn openfile(path : Option<PathBuf>) -> String {
 }
 fn savetofile(path : Option<PathBuf>, text : String){
         if let Some(file_path) = path {
-            println!("{:?}", file_path);
             let mut file = OpenOptions::new()
                 .create(true)
                 .write(true)
@@ -201,6 +201,7 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        //title logic for * when unsaved
         if !self.auto_save_to_ram {
             self.code_editor.code.clear();
         }
@@ -211,6 +212,9 @@ impl eframe::App for TemplateApp {
                 if let Some(file_name_str) = file_name.to_str() {
                     self.window_title = format!("Marcide - {}", file_name_str.to_string());
                 }
+            }
+            if self.code_editor_text_lenght != self.code_editor.code.len() {
+                self.window_title = self.window_title.clone() + &"*".as_str();
             }
         }
         
@@ -230,6 +234,7 @@ impl eframe::App for TemplateApp {
         if sis_pressed && ctrlis_pressed && has_focus {
             if self.last_save_path.is_some() {
                 savetofile(self.last_save_path.clone(), self.text.clone());
+                self.code_editor_text_lenght = self.code_editor.code.len();
             }
             else {
                 let files = FileDialog::new()
@@ -239,6 +244,7 @@ impl eframe::App for TemplateApp {
                     if files.clone().is_some(){
                         self.last_save_path = files.clone();
                         savetofile(files.clone(), self.text.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
                     }
             }
         }
@@ -258,7 +264,8 @@ impl eframe::App for TemplateApp {
                 }
                 
             });
-        } 
+        }
+        /* 
         if self.spotify_window_is_open{
             egui::Window::new("Spotify")
             .open(&mut self.spotify_window_is_open)
@@ -266,6 +273,7 @@ impl eframe::App for TemplateApp {
 
             });
         }
+        */
         //autosave implementation
         if self.last_save_path.is_some() {
             //define recv sender
@@ -278,11 +286,9 @@ impl eframe::App for TemplateApp {
                         Ok(text) => {
                             let lines : Vec<&str> = text.lines().collect();
                             savetofile(Some(PathBuf::from(lines[1])), lines[0].to_string());
-                            
                         },
-                        Err(err) => {
-                            std::thread::sleep(Duration::from_micros(10));
-                            println!("{}", err)
+                        Err(_) => {
+                            //code editor didnt recive new input, shit on it
                         }
                     };
                     
@@ -291,7 +297,10 @@ impl eframe::App for TemplateApp {
             });
                 if let Some(path) = self.last_save_path.clone() {
                     let data_to_send : String = format!("{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string());
-                    tx.send(data_to_send).expect("Unable to send msg");
+                    if self.code_editor_text_lenght < self.code_editor.code.len() {
+                        tx.send(data_to_send).expect("Unable to send msg");
+                    }
+                    
                 }
         }
         if self.settings_window_is_open{
@@ -371,6 +380,7 @@ impl eframe::App for TemplateApp {
                     if files.clone().is_some(){
                         self.last_save_path = files.clone();
                         self.code_editor.code = openfile(files);
+                        self.code_editor_text_lenght = self.code_editor.code.len();
                     }
 
                     
@@ -383,6 +393,7 @@ impl eframe::App for TemplateApp {
                     if files.clone().is_some(){
                         self.last_save_path = files.clone();
                         savetofile(files.clone(), self.text.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                     
                 }
@@ -393,10 +404,15 @@ impl eframe::App for TemplateApp {
                             .set_directory("/")
                             .save_file();
                         self.last_save_path = files.clone();
-                        savetofile(self.last_save_path.clone(), self.text.clone())
+                        savetofile(self.last_save_path.clone(), self.text.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
+                    }
+                    else if self.code_editor_text_lenght < self.code_editor.code.len() {
+                        savetofile(self.last_save_path.clone(), self.text.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                     else {
-                        savetofile(self.last_save_path.clone(), self.text.clone())
+                        //do nothing
                     }
                     
                 }
