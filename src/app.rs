@@ -7,7 +7,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK
 use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
-
+use std::io;
 use std::io::{Write, Read};
 use std::fs::File;
 use chrono::Utc;
@@ -21,6 +21,8 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+    #[serde(skip)]
+    to_find: String,
     #[serde(skip)]
     errout: String,
     #[serde(skip)]
@@ -52,11 +54,16 @@ pub struct TemplateApp {
     code_editor_text_lenght: usize,
     #[serde(skip)]
     discord_presence_is_running: bool,
+    #[serde(skip)]
+    lines: Vec<String>,
+    #[serde(skip)]
+    finder_is_open: bool,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            to_find: String::new(),
             errout: String::new(),
             output: String::new(),
             output_window_is_open: false,
@@ -74,6 +81,8 @@ impl Default for TemplateApp {
             autosave_sender: None,
             code_editor_text_lenght: 0,
             discord_presence_is_running: false,
+            lines: Vec::new(),
+            finder_is_open: false,
         }
     }
 }
@@ -87,6 +96,19 @@ impl TemplateApp {
         
         Default::default()
     }
+}
+fn finder(text : String, to_find : String) -> io::Result<Vec<usize>> {
+    //let reader = BufReader::new(file);
+    let mut line_numbers: Vec<usize> = Vec::new();
+
+    for (line_number, line) in text.lines().enumerate() {
+        let line_content = line;
+        if line_content.contains(&to_find) {
+            line_numbers.push(line_number + 1); // Add 1 to convert zero-based index to line number
+        }
+    }
+
+    Ok(line_numbers)
 }
 fn mkdir(){
     let mut command = String::new();
@@ -281,6 +303,19 @@ impl eframe::App for TemplateApp {
                 
             });
         }
+        if self.finder_is_open{
+            egui::Window::new("Finder")
+            .open(&mut self.finder_is_open)
+            .show(ctx, |ui| {
+                ui.label("Finder");
+                ui.text_edit_singleline(&mut self.to_find);
+                if ui.button("Search").clicked(){
+                    let Occur : io::Result<Vec<usize>> = finder(self.code_editor.code.clone(), self.to_find.clone());
+                    println!("{:?}", Occur.unwrap());
+                    //update scroll offset and done!
+                } 
+            });
+        }
         /* 
         if self.spotify_window_is_open{
             egui::Window::new("Spotify")
@@ -454,6 +489,9 @@ impl eframe::App for TemplateApp {
                     }
                     
                 }
+                if ui.button("Find").clicked(){
+                    self.finder_is_open = !self.finder_is_open;
+                }
                 if ui.button("Settings").clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
@@ -464,6 +502,7 @@ impl eframe::App for TemplateApp {
             });
             
         });
+
         egui::TopBottomPanel::bottom("Stats").show(ctx, |ui|{
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui|{
                 let lenght = self.text.len();
@@ -489,9 +528,8 @@ impl eframe::App for TemplateApp {
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
                     code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui);
                 });
-                
         });
-
+        
         if false {
             egui::Window::new("Window").show(ctx, |ui| {
                 ui.label("Windows can be moved by dragging them.");

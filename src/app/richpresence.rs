@@ -1,4 +1,4 @@
-use discord_presence::{Client, Event};
+use discord_presence::{Client};
 
 pub fn main(file_name : String) {
 

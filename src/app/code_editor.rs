@@ -288,11 +288,12 @@ impl CodeEditor {
             .cursor_at_end(false)
             .id(id)
             .desired_rows(rows);
-
         let scroll_res = egui::ScrollArea::vertical()
         .stick_to_bottom(true)
             .show(&mut frame_ui, |ui| {
+                
                 ui.add(text_widget);
+                
             });
 
         scroll_res.state.offset
