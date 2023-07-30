@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F};
 use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
@@ -267,7 +267,11 @@ impl eframe::App for TemplateApp {
              GetAsyncKeyState(VK_S as i32)
         };
         let sis_pressed = (sinp as u16 & 0x8000) != 0;
-
+        //if f is pressed
+        let fimput = unsafe {
+            GetAsyncKeyState(VK_F as i32)
+        };
+        let fis_pressed = (fimput as u16 & 0x8000) != 0;
         //save hotkey
         if sis_pressed && ctrlis_pressed && has_focus {
             if self.last_save_path.is_some() {
@@ -285,6 +289,10 @@ impl eframe::App for TemplateApp {
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
             }
+        }
+        //finder hotkey
+        if ctrlis_pressed && fis_pressed {
+            self.finder_is_open = true;
         }
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
