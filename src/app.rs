@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self};
+use std::sync::mpsc::{self, Sender};
 use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer};
 use rfd::FileDialog;
@@ -293,12 +293,12 @@ impl eframe::App for TemplateApp {
         //autosave implementation
         if self.last_save_path.is_some() {
             //define recv sender
+            
             let tx = self.autosave_sender.get_or_insert_with(||{
                 let (tx,rx) = mpsc::channel::<String>();
                 std::thread::spawn(move || loop {
                     //reciver, text always gets updated
                     match rx.try_recv(){
-                        
                         Ok(text) => {
                             let lines : Vec<&str> = text.lines().collect();
                             savetofile(Some(PathBuf::from(lines[1])), lines[0].to_string());
@@ -311,14 +311,16 @@ impl eframe::App for TemplateApp {
                 });
                 tx
             });
+            if self.auto_save {
                 if let Some(path) = self.last_save_path.clone() {
-                    let data_to_send : String = format!("{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string());
+                    let data_to_send : String = format!("{}\n{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string(), self.auto_save.to_string());
                     if self.code_editor_text_lenght < self.code_editor.code.len() {
                         tx.send(data_to_send).expect("Unable to send msg");
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                     
                 }
+            }   
         }
         if self.settings_window_is_open{
             egui::Window::new("Settings")
