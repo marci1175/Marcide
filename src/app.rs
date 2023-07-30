@@ -119,7 +119,7 @@ fn runfile(path : Option<PathBuf>, language : String) -> std::process::Output {
         .arg(command_to_be_excecuted)    
         .output();
     match cmdcomm {
-        Ok(ok) => {println!("{:?}",ok); ok}
+        Ok(ok) => {ok}
         Err(_) => {unsafe { MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK) }; cmdcomm.unwrap()}
     }
 }
@@ -142,6 +142,7 @@ fn savetofile(path : Option<PathBuf>, text : String){
         if let Some(file_path) = path {
             let mut file = OpenOptions::new()
                 .create(true)
+                .truncate(true)
                 .write(true)
                 .open(file_path.clone()).expect("wrong folder dumbass");
             // Write some data to the file
@@ -299,6 +300,7 @@ impl eframe::App for TemplateApp {
                     let data_to_send : String = format!("{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string());
                     if self.code_editor_text_lenght < self.code_editor.code.len() {
                         tx.send(data_to_send).expect("Unable to send msg");
+                        self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                     
                 }
@@ -341,29 +343,40 @@ impl eframe::App for TemplateApp {
                 if ui.button("Run").clicked() {
                     if self.language == "py" || self.language == "lua" {
                         //save to temp folder
-                        mkdir();
-                        //C:\Users\%user_name%\marcide.temp
-                        if let Some(mut home_dir) = home_dir() {
-                            let mut rng = rand::thread_rng();
+                        if self.last_save_path.is_none() {
+                            mkdir();
+                            //C:\Users\%user_name%\marcide.temp
+                            if let Some(mut home_dir) = home_dir() {
+                                let mut rng = rand::thread_rng();
 
-        
-                            let random_number = rng.gen_range(1..=100000000);
-                            let to_push = format!("%marcide.temp%\\{}.{}", random_number, self.language);
-                            home_dir.push(to_push);
-                    
-                            // Set the files variable
-                            let files: Option<PathBuf> = Some(home_dir);
-                            //save file
-                            savetofile(files.clone(), self.text.clone());
-                            //run file
-                            self.output_window_is_open = true;
-                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
-                            
-                            if self.output.len() == 0{
-                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
-                            }
+            
+                                let random_number = rng.gen_range(1..=100000000);
+                                let to_push = format!("%marcide.temp%\\{}.{}", random_number, self.language);
+                                home_dir.push(to_push);
+                        
+                                // Set the files variable
+                                let files: Option<PathBuf> = Some(home_dir);
+                                //save file
+                                savetofile(files.clone(), self.text.clone());
+                                //run file
+                                self.output_window_is_open = true;
+                                self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                                
+                                if self.output.len() == 0{
+                                    self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+                                }
                                           
-                        }
+                                }
+                            }
+                            else {
+                                let files = self.last_save_path.clone();
+                                self.output_window_is_open = true;
+                                self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                                
+                                if self.output.len() == 0{
+                                    self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+                                }
+                            }
                     }
                     else {
                         unsafe{
