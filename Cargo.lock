@@ -850,6 +850,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "discord-rpc"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c2576e1d277e65fb70b1048a76f563b8ac59c211fd6fecca3ff32f49dd6efa"
+
+[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1762,6 +1768,7 @@ dependencies = [
  "chrono",
  "console_error_panic_hook",
  "dirs 5.0.1",
+ "discord-rpc",
  "eframe",
  "egui",
  "enum-map",
