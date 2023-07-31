@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 use std::path::PathBuf;
-use egui::{RichText, Color32, TextBuffer};
+use egui::{RichText, Color32, TextBuffer, Vec2};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F, VK_O, VK_R, VK_T, VK_N};
@@ -72,9 +72,8 @@ pub struct TemplateApp {
     #[serde(skip)]
     finder_is_open: bool,
     #[serde(skip)]
-    scroll_offset_x: f32,
-    #[serde(skip)]
-    scroll_offset_y: f32,
+    scroll_offset: Vec2,
+    
     
     #[serde(skip)]
     is_found: Option<bool>,
@@ -105,8 +104,7 @@ impl Default for TemplateApp {
             discord_presence_is_running: false,
             lines: Vec::new(),
             finder_is_open: false,
-            scroll_offset_x: 0.0,
-            scroll_offset_y: 0.0,
+            scroll_offset: (0.0, 0.0).into(),
             is_found: None,
             occurences: 0,
         }
@@ -448,7 +446,7 @@ impl eframe::App for TemplateApp {
                     else {
                         go_to_offset = true;
                         occurence = occur.as_ref().unwrap()[0];
-                        self.scroll_offset_y = occurence as f32;
+                        self.scroll_offset[1] = occurence as f32;
                         self.occurences = occur.unwrap().len();
                         self.is_found = Some(true);
                     }
@@ -681,7 +679,7 @@ impl eframe::App for TemplateApp {
         });
         egui::CentralPanel::default().show(ctx, |ui|{
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
-                    code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui, (self.scroll_offset_x , self.scroll_offset_y).into(), go_to_offset);
+                    self.scroll_offset = code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui, self.scroll_offset, go_to_offset);
                 });
         });
         

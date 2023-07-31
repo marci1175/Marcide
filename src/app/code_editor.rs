@@ -291,6 +291,7 @@ impl CodeEditor {
         let mut scroll_res = egui::ScrollArea::vertical()
             .id_source("code editor")
             .stick_to_bottom(true)
+            .scroll_offset(scroll_offset)
             .show(&mut frame_ui, |ui| {
                 ui.add(text_widget);
             });
