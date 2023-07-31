@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F, VK_O, VK_R, VK_T, VK_N};
 use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
@@ -21,26 +21,39 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+
     #[serde(skip)]
     to_find: String,
+    
     #[serde(skip)]
     errout: String,
+
     #[serde(skip)]
     output: String,
+
     #[serde(skip)]
     output_window_is_open: bool,
+
     #[serde(skip)]
     spotify_window_is_open: bool,
+
     #[serde(skip)]
     window_title: String,
+
     #[serde(skip)]
     settings_window_is_open: bool,
+
     auto_save_to_ram: bool,
+
     auto_save: bool,
+
     #[serde(skip)]
     text: String,
+
     language: String,
+
     code_editor: CodeEditor,
+
     #[serde(skip)]
     last_save_path: Option<PathBuf>,
 
@@ -58,6 +71,15 @@ pub struct TemplateApp {
     lines: Vec<String>,
     #[serde(skip)]
     finder_is_open: bool,
+    #[serde(skip)]
+    scroll_offset_x: f32,
+    #[serde(skip)]
+    scroll_offset_y: f32,
+    
+    #[serde(skip)]
+    is_found: Option<bool>,
+    #[serde(skip)]
+    occurences: usize,
 }
 
 impl Default for TemplateApp {
@@ -83,6 +105,10 @@ impl Default for TemplateApp {
             discord_presence_is_running: false,
             lines: Vec::new(),
             finder_is_open: false,
+            scroll_offset_x: 0.0,
+            scroll_offset_y: 0.0,
+            is_found: None,
+            occurences: 0,
         }
     }
 }
@@ -228,6 +254,7 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut go_to_offset : bool = false;
         let wintitl = self.window_title.clone();
         if !self.discord_presence_is_running{
             std::thread::spawn(move || loop {
@@ -257,6 +284,23 @@ impl eframe::App for TemplateApp {
         }
         
         _frame.set_window_title(self.window_title.as_str());
+
+        let nimput = unsafe {
+            GetAsyncKeyState(VK_N as i32)
+        };
+        let nis_pressed = (nimput as u16 & 0x8000) != 0;
+        let oimput = unsafe {
+            GetAsyncKeyState(VK_O as i32)
+        };
+        let ois_pressed = (oimput as u16 & 0x8000) != 0;
+        let rimput = unsafe {
+            GetAsyncKeyState(VK_R as i32)
+        };
+        let ris_pressed = (rimput as u16 & 0x8000) != 0;
+        let timput = unsafe {
+            GetAsyncKeyState(VK_T as i32)
+        };
+        let tis_pressed = (timput as u16 & 0x8000) != 0;
         let has_focus = ctx.input(|i| i.focused);
         let ctrlimput = unsafe {
             GetAsyncKeyState(VK_CONTROL as i32)
@@ -292,7 +336,85 @@ impl eframe::App for TemplateApp {
         }
         //finder hotkey
         if ctrlis_pressed && fis_pressed {
-            self.finder_is_open = true;
+            if !self.finder_is_open {
+                self.finder_is_open = true;
+            }
+        }
+        if ctrlis_pressed && ris_pressed {
+            if !self.output_window_is_open {
+                if self.language == "py" || self.language == "lua" {
+                    //save to temp folder
+                    if self.last_save_path.is_none() {
+                        mkdir();
+                        //C:\Users\%user_name%\marcide.temp
+                        if let Some(mut home_dir) = home_dir() {
+                            let mut rng = rand::thread_rng();
+    
+                            let to_push = format!("%marcide.temp%\\{}.{}", "tempfile", self.language);
+                            home_dir.push(to_push);
+                    
+                            // Set the files variable
+                            let files: Option<PathBuf> = Some(home_dir);
+                            //save file
+                            savetofile(files.clone(), self.text.clone());
+                            //run file
+                            self.output_window_is_open = true;
+                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                            
+                            if self.output.len() == 0{
+                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+                            }
+                                      
+                            }
+                        }
+                        else {
+                            let files = self.last_save_path.clone();
+                            self.output_window_is_open = true;
+                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                            
+                            if self.output.len() == 0{
+                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+                            }
+                        }
+                }
+                else {
+                    unsafe{
+                        MessageBoxW(0,  w!("This ide can only run .lua, and .py files out of box"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
+                    }
+                }
+            }
+        }
+        if ctrlis_pressed && fis_pressed {
+            if !self.finder_is_open {
+            self.finder_is_open = !self.finder_is_open;
+            }
+        }
+        if ctrlis_pressed && ois_pressed {
+            let files = FileDialog::new()
+                        .set_title("Open")
+                        .set_directory("/")
+                        .pick_file();
+                    if files.clone().is_some(){
+                        self.last_save_path = files.clone();
+                        self.code_editor.code = openfile(files);
+                        self.code_editor_text_lenght = self.code_editor.code.len();
+                    }
+        }
+        if ctrlis_pressed && tis_pressed {
+            if !self.settings_window_is_open{
+            self.settings_window_is_open = !self.settings_window_is_open;
+            }
+        }
+        if ctrlis_pressed && nis_pressed {
+            let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                    if files.clone().is_some(){
+                        self.last_save_path = files.clone();
+                        savetofile(files.clone(), self.text.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
+                    }
         }
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
@@ -315,13 +437,30 @@ impl eframe::App for TemplateApp {
             egui::Window::new("Finder")
             .open(&mut self.finder_is_open)
             .show(ctx, |ui| {
+                let mut occurence: usize = 0;
+                
                 ui.label("Finder");
                 ui.text_edit_singleline(&mut self.to_find);
                 if ui.button("Search").clicked(){
-                    let Occur : io::Result<Vec<usize>> = finder(self.code_editor.code.clone(), self.to_find.clone());
-                    println!("{:?}", Occur.unwrap());
+                    let occur : io::Result<Vec<usize>> = finder(self.code_editor.code.clone(), self.to_find.clone());
+                    if occur.as_ref().unwrap().len() == 0 {
+                        self.is_found = None;
+                    }
+                    else {
+                        go_to_offset = true;
+                        occurence = occur.as_ref().unwrap()[0];
+                        self.scroll_offset_y = occurence as f32;
+                        self.occurences = occur.unwrap().len();
+                        self.is_found = Some(true);
+                    }
                     //update scroll offset and done!
                 } 
+                if self.is_found.is_none() {
+                    ui.colored_label(Color32::RED, "0 Occurences in the text");
+                }
+                else {
+                    ui.colored_label(Color32::GREEN, format!("Appears in {} line(s)", self.occurences));
+                }
             });
         }
         /* 
@@ -356,7 +495,7 @@ impl eframe::App for TemplateApp {
             });
             if self.auto_save {
                 if let Some(path) = self.last_save_path.clone() {
-                    let data_to_send : String = format!("{}\n{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string(), self.auto_save.to_string());
+                    let data_to_send : String = format!("{}\n{}",self.code_editor.code.clone(), path.to_str().unwrap_or_default().to_string());
                     if self.code_editor_text_lenght < self.code_editor.code.len() {
                         tx.send(data_to_send).expect("Unable to send msg");
                         self.code_editor_text_lenght = self.code_editor.code.len();
@@ -407,8 +546,15 @@ impl eframe::App for TemplateApp {
                 4. Put into baking dish  
                 5. Bake ~30 minutes at 375 F 
             */
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui|{
-                if ui.button("Run").clicked() {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui|{
+                //define buttons
+                let settings = ui.button("Settings");
+                let find = ui.button("Find");
+                let save = ui.button("Save");
+                let save_as = ui.button("Save as");
+                let open = ui.button("Open");
+                let run = ui.button("Run");
+                if run.clicked() {
                     if self.language == "py" || self.language == "lua" {
                         //save to temp folder
                         if self.last_save_path.is_none() {
@@ -453,7 +599,7 @@ impl eframe::App for TemplateApp {
                     }
 
                 }
-                if ui.button("Open").clicked() {
+                if open.clicked() {
                     let files = FileDialog::new()
                         .set_title("Open")
                         .set_directory("/")
@@ -463,10 +609,8 @@ impl eframe::App for TemplateApp {
                         self.code_editor.code = openfile(files);
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
-
-                    
                 }
-                if ui.button("Save as").clicked(){
+                if save_as.clicked(){
                     let files = FileDialog::new()
                             .set_title("Save as")
                             .set_directory("/")
@@ -476,9 +620,8 @@ impl eframe::App for TemplateApp {
                         savetofile(files.clone(), self.text.clone());
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
-                    
-                }
-                if ui.button("Save").clicked(){
+                };
+                if save.clicked(){
                     if self.last_save_path.clone().is_none(){
                         let files = FileDialog::new()
                             .set_title("Save as")
@@ -497,16 +640,21 @@ impl eframe::App for TemplateApp {
                     }
                     
                 }
-                if ui.button("Find").clicked(){
+                if find.clicked(){
                     self.finder_is_open = !self.finder_is_open;
                 }
-                if ui.button("Settings").clicked(){
+                if settings.clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
                 /*if ui.button("Spotify").clicked(){
                     self.spotify_window_is_open = true;
                 } */
-                
+                run.on_hover_text("You can run py and lua files\nCTRL + R");
+                open.on_hover_text("CTRL + O");
+                save_as.on_hover_text("CTRL + N");
+                save.on_hover_text("CTRL + S");
+                find.on_hover_text("CTRL + F");
+                settings.on_hover_text("CTRL + T");
             });
             
         });
@@ -534,7 +682,7 @@ impl eframe::App for TemplateApp {
         });
         egui::CentralPanel::default().show(ctx, |ui|{
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
-                    code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui);
+                    code_editor::CodeEditor::show(&mut self.code_editor, "id".into(), ui, (self.scroll_offset_x , self.scroll_offset_y).into(), go_to_offset);
                 });
         });
         

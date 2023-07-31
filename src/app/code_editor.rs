@@ -247,7 +247,7 @@ impl Default for CodeEditor {
 }
 
 impl CodeEditor {
-    pub fn show(&mut self, id: Id, ui: &mut egui::Ui) -> Vec2 {
+    pub fn show(&mut self, id: Id, ui: &mut egui::Ui, scroll_offset: Vec2, go_to_offset : bool) -> Vec2 {
         let Self { language, code } = self;
 
         let frame_rect = ui.max_rect().shrink(0.0);
@@ -288,13 +288,16 @@ impl CodeEditor {
             .cursor_at_end(false)
             .id(id)
             .desired_rows(rows);
-        let scroll_res = egui::ScrollArea::vertical()
-        .stick_to_bottom(true)
+        let mut scroll_res = egui::ScrollArea::vertical()
+            .id_source("code editor")
+            .stick_to_bottom(true)
             .show(&mut frame_ui, |ui| {
-                
                 ui.add(text_widget);
-                
             });
+        //finder is on
+        if go_to_offset {
+           scroll_res.state.offset[1] = scroll_offset.clone()[1];
+        }
 
         scroll_res.state.offset
     }
