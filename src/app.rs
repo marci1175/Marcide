@@ -10,6 +10,7 @@ use self::code_editor::CodeEditor;
 use std::io;
 use std::io::{Write, Read};
 use std::fs::File;
+use webbrowser::open;
 use chrono::Utc;
 use rand::Rng;
 use dirs::home_dir;
@@ -551,6 +552,7 @@ impl eframe::App for TemplateApp {
                 let save_as = ui.button("Save as");
                 let open = ui.button("Open");
                 let settings = ui.button("Settings");
+                let support = ui.button("Support");
                 if run.clicked() {
                     if self.language == "py" || self.language == "lua" {
                         //save to temp folder
@@ -643,6 +645,12 @@ impl eframe::App for TemplateApp {
                 if settings.clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
+                if support.clicked(){
+                    match webbrowser::open("https://discord.gg/hT9JdwgbQv"){
+                        Ok(_) => {},
+                        Err(_) => {}
+                    };
+                }
                 /*
                 if ui.button("Spotify").clicked(){
                     self.spotify_window_is_open = true;
@@ -654,6 +662,7 @@ impl eframe::App for TemplateApp {
                 save.on_hover_text("CTRL + S");
                 find.on_hover_text("CTRL + F");
                 settings.on_hover_text("CTRL + T");
+                support.on_hover_text("If you encounter errors make sure to contact support!");
             });
             
         });
