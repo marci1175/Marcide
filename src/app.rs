@@ -643,9 +643,11 @@ impl eframe::App for TemplateApp {
                 if settings.clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
-                /*if ui.button("Spotify").clicked(){
+                /*
+                if ui.button("Spotify").clicked(){
                     self.spotify_window_is_open = true;
-                } */
+                }
+                */
                 run.on_hover_text("You can run py and lua files\nCTRL + R");
                 open.on_hover_text("CTRL + O");
                 save_as.on_hover_text("CTRL + N");
