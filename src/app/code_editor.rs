@@ -285,7 +285,7 @@ impl CodeEditor {
             .desired_width(f32::INFINITY)
             .margin(vec2(2.0, 2.0))
             .layouter(&mut layouter)
-            .cursor_at_end(false)
+            
             .id(id)
             .desired_rows(rows);
         let mut scroll_res = egui::ScrollArea::vertical()
@@ -298,7 +298,8 @@ impl CodeEditor {
         if go_to_offset {
            scroll_res.state.offset[1] = scroll_offset.clone()[1];
         }
-
+        
+        dbg!(scroll_res.state.offset[1]);
         scroll_res.state.offset
     }
 }

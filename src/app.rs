@@ -348,8 +348,7 @@ impl eframe::App for TemplateApp {
                         mkdir();
                         //C:\Users\%user_name%\marcide.temp
                         if let Some(mut home_dir) = home_dir() {
-                            let mut rng = rand::thread_rng();
-    
+   
                             let to_push = format!("%marcide.temp%\\{}.{}", "tempfile", self.language);
                             home_dir.push(to_push);
                     
@@ -437,7 +436,7 @@ impl eframe::App for TemplateApp {
             egui::Window::new("Finder")
             .open(&mut self.finder_is_open)
             .show(ctx, |ui| {
-                let mut occurence: usize = 0;
+                let occurence: usize;
                 
                 ui.label("Finder");
                 ui.text_edit_singleline(&mut self.to_find);
@@ -548,12 +547,12 @@ impl eframe::App for TemplateApp {
             */
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui|{
                 //define buttons
-                let settings = ui.button("Settings");
+                let run = ui.button("Run");
                 let find = ui.button("Find");
                 let save = ui.button("Save");
                 let save_as = ui.button("Save as");
                 let open = ui.button("Open");
-                let run = ui.button("Run");
+                let settings = ui.button("Settings");
                 if run.clicked() {
                     if self.language == "py" || self.language == "lua" {
                         //save to temp folder
