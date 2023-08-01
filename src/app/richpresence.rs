@@ -15,31 +15,35 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
     });
 
     let rp = ds::activity::ActivityBuilder::default()
-        .details("Fruit Tarts".to_owned())
-        .state("Pop Snacks".to_owned())
+        .details("Marcide, made by marci1175")
+        .state(format!("Session started : {}", projstart).to_owned())
         .assets(
             ds::activity::Assets::default()
                 .large("the".to_owned(), Some("u mage".to_owned()))
                 .small("the".to_owned(), Some("i mage".to_owned())),
         )
         .button(ds::activity::Button {
-            label: "Marcide".to_owned(),
+            label: "Marcide Official github".to_owned(),
             url: "https://github.com/marci1175/marcide".to_owned(),
         })
+        .button(ds::activity::Button {
+            label: "Marcide Official discord".to_owned(),
+            url: "https://discord.gg/hT9JdwgbQv".to_owned(),
+        })
         .start_timestamp(SystemTime::now());
-    
+
     tracing::info!(
-        "Success!"
+        "updated activity: {:?}",
+        client.discord.update_activity(rp).await
     );
- 
-    
+
     let mut r = String::new();
     let _ = std::io::stdin().read_line(&mut r);
 
-    /*tracing::info!(
+    tracing::info!(
         "cleared activity: {:?}",
         client.discord.clear_activity().await
-    );*/
+    );
 
     client.discord.disconnect().await;
 

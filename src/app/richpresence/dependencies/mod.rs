@@ -14,6 +14,7 @@ pub struct Client {
 }
 
 pub async fn make_client(subs: ds::Subscriptions) -> Client {
+    
 
     let (wheel, handler) = ds::wheel::Wheel::new(Box::new(|err| {
         tracing::error!(error = ?err, "encountered an error");
@@ -32,7 +33,7 @@ pub async fn make_client(subs: ds::Subscriptions) -> Client {
         ds::wheel::UserState::Disconnected(err) => panic!("failed to connect to Discord: {}", err),
     };
 
-    //tracing::info!("connected to Discord, local user is {:#?}", user);
+    tracing::info!("connected to Discord, local user is {:#?}", user);
 
     Client {
         discord,

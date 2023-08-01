@@ -10,7 +10,6 @@ use self::code_editor::CodeEditor;
 use std::io;
 use std::io::{Write, Read};
 use std::fs::File;
-use chrono::Utc;
 use rand::Rng;
 use dirs::home_dir;
 
@@ -58,27 +57,36 @@ pub struct TemplateApp {
     last_save_path: Option<PathBuf>,
 
     auto_save_interval: u64,
+
     #[serde(skip)]
     autosave_sender: Option<mpsc::Sender<String>>,
 
     #[serde(skip)]
-    session_started: chrono::DateTime<Utc>,
+    session_started: chrono::DateTime<chrono::Local>,
+
     #[serde(skip)]
     code_editor_text_lenght: usize,
+
     #[serde(skip)]
     discord_presence_is_running: bool,
+
     #[serde(skip)]
     lines: Vec<String>,
+
     #[serde(skip)]
     finder_is_open: bool,
+
     #[serde(skip)]
     scroll_offset: Vec2,
-    
-    
+
     #[serde(skip)]
     is_found: Option<bool>,
+
     #[serde(skip)]
     occurences: usize,
+
+    #[serde(skip)]
+    opened_file: String
 }
 
 impl Default for TemplateApp {
@@ -90,7 +98,7 @@ impl Default for TemplateApp {
             output_window_is_open: false,
             spotify_window_is_open: false,
             window_title: "Marcide".into(),
-            session_started: Utc::now(),
+            session_started: chrono::Local::now(),
             settings_window_is_open: false,
             auto_save: true,
             auto_save_to_ram: false,
@@ -107,6 +115,7 @@ impl Default for TemplateApp {
             scroll_offset: (0.0, 0.0).into(),
             is_found: None,
             occurences: 0,
+            opened_file: String::new(),
         }
     }
 }
@@ -255,12 +264,9 @@ impl eframe::App for TemplateApp {
         let mut go_to_offset : bool = false;
         if !self.discord_presence_is_running{
             let projname = self.window_title.clone();
-            let starttime = self.session_started;
+            let starttime = self.session_started.format("%Y-%m-%d %H:%M:%S").to_string();
             std::thread::spawn( move || {
-                match richpresence::rpc(projname,starttime.to_string()) {
-                    Ok(ok) => {ok},
-                    Err(err) => {println!("Failed to set richpresence : {}", err)}
-                }
+                let _ = richpresence::rpc(projname , starttime.to_string());
             });
             ctx.request_repaint();
             self.discord_presence_is_running = true;
@@ -278,6 +284,7 @@ impl eframe::App for TemplateApp {
             if let Some(file_name) = wintitle.file_name() {
                 if let Some(file_name_str) = file_name.to_str() {
                     self.window_title = format!("Marcide - {}", file_name_str.to_string());
+                    self.opened_file = file_name_str.clone().to_string();
                 }
             }
             if self.code_editor_text_lenght != self.code_editor.code.len() {
@@ -337,12 +344,12 @@ impl eframe::App for TemplateApp {
             }
         }
         //finder hotkey
-        if ctrlis_pressed && fis_pressed {
+        if ctrlis_pressed && fis_pressed && has_focus {
             if !self.finder_is_open {
                 self.finder_is_open = true;
             }
         }
-        if ctrlis_pressed && ris_pressed {
+        if ctrlis_pressed && ris_pressed && has_focus {
             if !self.output_window_is_open {
                 if self.language == "py" || self.language == "lua" {
                     //save to temp folder
@@ -385,12 +392,12 @@ impl eframe::App for TemplateApp {
                 }
             }
         }
-        if ctrlis_pressed && fis_pressed {
+        if ctrlis_pressed && fis_pressed && has_focus {
             if !self.finder_is_open {
             self.finder_is_open = !self.finder_is_open;
             }
         }
-        if ctrlis_pressed && ois_pressed {
+        if ctrlis_pressed && ois_pressed && has_focus {
             let files = FileDialog::new()
                         .set_title("Open")
                         .set_directory("/")
@@ -401,12 +408,12 @@ impl eframe::App for TemplateApp {
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
         }
-        if ctrlis_pressed && tis_pressed {
+        if ctrlis_pressed && tis_pressed && has_focus {
             if !self.settings_window_is_open{
             self.settings_window_is_open = !self.settings_window_is_open;
             }
         }
-        if ctrlis_pressed && nis_pressed {
+        if ctrlis_pressed && nis_pressed && has_focus {
             let files = FileDialog::new()
                             .set_title("Save as")
                             .set_directory("/")
@@ -683,7 +690,7 @@ impl eframe::App for TemplateApp {
                 ui.label(words.len().to_string() + " : Words");
                 ui.label(final_lenght.to_string() + " : Characters");
                 ui.separator();
-                let current_datetime = chrono::Utc::now();
+                let current_datetime = chrono::Local::now();
                 let datetime_str = current_datetime.format("%H:%M:%S ").to_string();
                 let sessiondate_str = self.session_started.format("%H:%M:%S ").to_string();
                 ui.label(format!("Session started : {}", sessiondate_str));
