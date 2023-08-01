@@ -41,6 +41,7 @@ thiserror = "1.0.44"
 uuid = "1.4.1"
 ctrlc = "3.4.0"
 webbrowser = "0.8.10"
+discord-sdk = "0.3.4"
 
 
 

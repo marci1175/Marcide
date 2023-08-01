@@ -10,7 +10,6 @@ use self::code_editor::CodeEditor;
 use std::io;
 use std::io::{Write, Read};
 use std::fs::File;
-use webbrowser::open;
 use chrono::Utc;
 use rand::Rng;
 use dirs::home_dir;
@@ -519,8 +518,8 @@ impl eframe::App for TemplateApp {
                     ui.separator();
                     ui.label(egui::RichText::from("Programming language").size(20.0));
                     ui.text_edit_singleline(&mut self.language);
-                    if self.language == "quaran" || self.language == "Quaran" || self.language == "Korán" || self.language == "korán" {
-                        ui.hyperlink_to("Quaran", "https://mek.oszk.hu/06500/06534/06534.pdf");
+                    if self.language == "quran" || self.language == "Quran" || self.language == "Korán" || self.language == "korán" {
+                        ui.hyperlink_to("Quran", "https://mek.oszk.hu/06500/06534/06534.pdf");
                     }
                     if self.language == "marci1175" || self.language == "marci" || self.language == "Marci" || self.language == "Marcell" || self.language == "Varga Marcell" {
                         ui.separator();

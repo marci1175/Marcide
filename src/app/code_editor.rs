@@ -300,7 +300,7 @@ impl CodeEditor {
            scroll_res.state.offset[1] = scroll_offset.clone()[1] * 3.0;
         }
         
-        dbg!(scroll_res.state.offset[1]);
+        
         scroll_res.state.offset
     }
 }
