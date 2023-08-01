@@ -253,10 +253,14 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut go_to_offset : bool = false;
-        let wintitl = self.window_title.clone();
         if !self.discord_presence_is_running{
-            std::thread::spawn(move || loop {
-                //richpresence::main(wintitl.clone());
+            let projname = self.window_title.clone();
+            let starttime = self.session_started;
+            std::thread::spawn( move || {
+                match richpresence::rpc(projname,starttime.to_string()) {
+                    Ok(ok) => {ok},
+                    Err(err) => {println!("Failed to set richpresence : {}", err)}
+                }
             });
             ctx.request_repaint();
             self.discord_presence_is_running = true;
