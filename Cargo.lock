@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "marcide"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1757,7 +1757,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "webbrowser",
  "windows 0.48.0",
- "windows-sys 0.48.0",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]

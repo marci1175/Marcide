@@ -57,7 +57,8 @@ pub struct TemplateApp {
     last_save_path: Option<PathBuf>,
 
     auto_save_interval: u64,
-
+    #[serde(skip)]
+    rpc_sender: Option<mpsc::Sender<String>>,
     #[serde(skip)]
     autosave_sender: Option<mpsc::Sender<String>>,
 
@@ -108,6 +109,7 @@ impl Default for TemplateApp {
             last_save_path: None,
             auto_save_interval: 15,
             autosave_sender: None,
+            rpc_sender: None,
             code_editor_text_lenght: 0,
             discord_presence_is_running: false,
             lines: Vec::new(),
@@ -262,15 +264,35 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut go_to_offset : bool = false;
-        if !self.discord_presence_is_running{
-            let projname = self.window_title.clone();
-            let starttime = self.session_started.format("%Y-%m-%d %H:%M:%S").to_string();
-            std::thread::spawn( move || {
-                let _ = richpresence::rpc(projname , starttime.to_string());
+        
+        let projname = self.opened_file.clone();
+        let starttime = self.session_started.format("%Y-%m-%d %H:%M:%S").to_string();
+            let tx = self.rpc_sender.get_or_insert_with(||{
+                let (tx,rx) = mpsc::channel::<String>();
+                std::thread::spawn(move || loop {
+                    //reciver, text always gets updated
+                    match rx.try_recv(){
+                        Ok(text) => {
+                            match richpresence::rpc(text,starttime.clone()){
+                                Err(err) => println!("Richpresence failed : {}", err),
+                                Ok(_) => {}
+                            };
+                        },
+                        Err(_) => {
+                            //code editor didnt recive new input, shit on it
+                        }
+                    };
+                    
+                });
+                tx
             });
-            ctx.request_repaint();
-            self.discord_presence_is_running = true;
-        }
+            match tx.send(self.opened_file.clone()){
+                Ok(_) => {},
+                Err(err) => {println!("Failed to send msg : {}",  err)}
+            };
+            
+            self.discord_presence_is_running = true;       
+        
         
         
         //title logic for * when unsaved
