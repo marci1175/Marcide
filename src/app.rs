@@ -265,8 +265,8 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut go_to_offset : bool = false;
         
-        let projname = self.opened_file.clone();
-        let starttime = self.session_started.format("%Y-%m-%d %H:%M:%S").to_string();
+        let _projname: String = self.opened_file.clone();
+        let starttime: String = self.session_started.format("%m-%d %H:%M:%S").to_string();
             let tx = self.rpc_sender.get_or_insert_with(||{
                 let (tx,rx) = mpsc::channel::<String>();
                 std::thread::spawn(move || loop {

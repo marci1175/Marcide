@@ -33,7 +33,7 @@ pub async fn make_client(subs: ds::Subscriptions) -> Client {
         ds::wheel::UserState::Disconnected(err) => panic!("failed to connect to Discord: {}", err),
     };
 
-    tracing::info!("connected to Discord, local user is {:#?}", user);
+    tracing::info!("Success!");
 
     Client {
         discord,

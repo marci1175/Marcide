@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 mod dependencies;
 use dependencies::{self as es, anyhow, ds, tokio, tracing};
+use ds::activity::Assets;
 
 #[tokio::main]
 pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Error> {
@@ -20,8 +21,7 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
         .state(format!("Session started : {}", projstart).to_owned())
         .assets(
             ds::activity::Assets::default()
-                .large("the".to_owned(), Some("u mage".to_owned()))
-                .small("the".to_owned(), Some("i mage".to_owned())),
+                .large("dsicordmariced".to_owned(), Some("u mage".to_owned()))
         )
         .button(ds::activity::Button {
             label: "Marcide Official github".to_owned(),
@@ -33,18 +33,20 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
         })
         .start_timestamp(SystemTime::now());
 
-    tracing::info!(
-        "updated activity: {:?}",
-        client.discord.update_activity(rp).await
-    );
+    match client.discord.update_activity(rp).await {
+        Ok(_) => {},
+        Err(err) => println!("{}",err)
+    }
 
     let mut r = String::new();
     let _ = std::io::stdin().read_line(&mut r);
 
-    tracing::info!(
-        "cleared activity: {:?}",
-        client.discord.clear_activity().await
-    );
+    match client.discord.clear_activity().await {
+        Ok(_) => {},
+        Err(err) => println!("{}",err)
+    }
+    
+
 
     client.discord.disconnect().await;
 

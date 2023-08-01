@@ -7,7 +7,6 @@ rust-version = "1.65"
 rfd = "0.11.4"
 
 
-
 [dependencies]
 egui = "0.22.0"
 eframe = { version = "0.22.0", default-features = false, features = [
@@ -44,8 +43,11 @@ discord-sdk = "0.3.4"
 tokio = {version = "1.29.1", features = ["full"]}
 anyhow = "1.0.72"
 tracing-subscriber = "0.3"
+embed-resource = "2.2.0"
 
 
+[build-dependencies]
+skeptic = "0.13"
 
 
 [dependencies.windows-sys]
@@ -76,5 +78,4 @@ opt-level = 2
 
 [patch.crates-io]
 
-[build-dependencies]
-skeptic = "0.13"
+
