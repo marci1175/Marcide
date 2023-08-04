@@ -348,11 +348,11 @@ impl CodeEditor {
                 simulate::type_str(")").unwrap();
                 match simulate::release(simulate::Key::Shift){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!(r#"Paniced at ) trying to send )"#)}
                 };
                 match simulate::send(simulate::Key::Left){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!(r#"Paniced at ) trying to send <-"#)}
                 };
                 self.sbracket_is_held = true;
     
@@ -365,11 +365,11 @@ impl CodeEditor {
                 simulate::type_str(r#"""#).unwrap();
                 match simulate::release(simulate::Key::Shift){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!(r#"Paniced at " trying to send " "#)}
                 };
                 match simulate::send(simulate::Key::Left){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!(r#"Paniced at " trying to send <-"#)}
                 };
                 self.quote_is_held = true;
             }
@@ -381,11 +381,11 @@ impl CodeEditor {
                 simulate::type_str("}").unwrap();
                 match simulate::release(simulate::Key::Shift){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!("Paniced at curlybracket trying to send curlybracket")}
                 };
                 match simulate::send(simulate::Key::Left){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!("Paniced at curlybracket trying to send <-")}
                 };
                 self.curlybracket_is_held = true;
     
@@ -398,11 +398,11 @@ impl CodeEditor {
                 simulate::type_str("]").unwrap();
                 match simulate::release(simulate::Key::Shift){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!("Paniced at ] trying to send ]")}
                 };
                 match simulate::send(simulate::Key::Left){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!("Paniced at ] trying to send <-")}
                 };
                 self.bracket_is_held = true;
             }

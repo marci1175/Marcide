@@ -16,11 +16,10 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
 
     let rp = ds::activity::ActivityBuilder::default()
         .details("Marcide, made by marci1175")
-        .details(format!("Current file : {}", projname))
         .state(format!("Session started : {}", projstart).to_owned())
         .assets(
             ds::activity::Assets::default()
-                .large("dsicordmariced".to_owned(), Some("u mage".to_owned()))
+                .large("dsicordmariced".to_owned(), Some("Cool icon hehe".to_owned()))
         )
         .button(ds::activity::Button {
             label: "Marcide Official github".to_owned(),
