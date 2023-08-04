@@ -20,7 +20,8 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
- 
+    #[serde(skip)]
+    recv: mpsc::channel::<String>,
     unsafe_mode: bool,
 
     #[serde(skip)]
@@ -95,6 +96,7 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            recv: mpsc::channel::<String>().1,
             unsafe_mode: false,
             to_find: String::new(),
             terminal_help: false,
@@ -292,8 +294,12 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let (s , r) = mpsc::channel::<String>();
         let mut go_to_offset : bool = false;
-        
+        match r.try_recv(){
+            Ok(ok) => {self.output = ok;}
+            Err(e) => {/*Task didnt finsih yet*/}
+        };
         let _projname: String = self.opened_file.clone();
         let starttime: String = self.session_started.format("%m-%d %H:%M:%S").to_string();
             let tx = self.rpc_sender.get_or_insert_with(||{
@@ -420,20 +426,8 @@ impl eframe::App for TemplateApp {
                             //save file
                             savetofile(files.clone(), self.text.clone());
                             //run file
-                                self.output_window_is_open = true;
-
-                                let lang = self.language.clone();
-                                let shared_result = Arc::new(Mutex::new(String::new()));
-                                let shared_result_clone = Arc::clone(&shared_result);
-                                
-                                std::thread::spawn(move || {
-                                    let result = String::from_utf8_lossy(&runfile(files.clone(), lang.clone()).stdout).to_string();
-                                    let mut shared_result = shared_result_clone.lock().unwrap();
-                                    *shared_result = result;
-                                });
-                                
-                                let result = shared_result.lock().unwrap().to_string();
-                                self.output = result;
+                            self.output_window_is_open = true;
+                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
                                       
                             }
                         }
@@ -647,16 +641,12 @@ impl eframe::App for TemplateApp {
                                 //run file
                                 self.output_window_is_open = true;
                                 let lang = self.language.clone();
-                                let shared_result = Arc::new(Mutex::new(String::new()));
-                                let shared_result_clone = Arc::clone(&shared_result);
                                 std::thread::spawn(move || {
-                                    let result = String::from_utf8_lossy(&runfile(files.clone(), lang.clone()).stdout).to_string();
-                                    let mut shared_result = shared_result_clone.lock().unwrap();
-                                    *shared_result = result;
+                                    let out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout).to_string();
+                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    println!("{}", out);
                                 });
-                                
-                                let result = shared_result.lock().unwrap().to_string();
-                                self.output = result;
+
                                 }
                             }
                             else {
