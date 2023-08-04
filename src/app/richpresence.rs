@@ -3,7 +3,7 @@ mod dependencies;
 use dependencies::{self as es, anyhow, ds, tokio, tracing};
 
 #[tokio::main]
-pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Error> {
+pub async fn rpc(projname: String, projstart: String) -> Result<(), anyhow::Error> {
     let client = es::make_client(ds::Subscriptions::ACTIVITY).await;
 
     let mut activity_events = client.wheel.activity();
@@ -17,10 +17,10 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
     let rp = ds::activity::ActivityBuilder::default()
         .details("Marcide, made by marci1175")
         .state(format!("Session started : {}", projstart).to_owned())
-        .assets(
-            ds::activity::Assets::default()
-                .large("dsicordmariced".to_owned(), Some("Cool icon hehe".to_owned()))
-        )
+        .assets(ds::activity::Assets::default().large(
+            "dsicordmariced".to_owned(),
+            Some("Cool icon hehe".to_owned()),
+        ))
         .button(ds::activity::Button {
             label: "Marcide Official github".to_owned(),
             url: "https://github.com/marci1175/marcide".to_owned(),
@@ -32,19 +32,17 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
         .start_timestamp(SystemTime::now());
 
     match client.discord.update_activity(rp).await {
-        Ok(_) => {},
-        Err(err) => println!("{}",err)
+        Ok(_) => {}
+        Err(err) => println!("{}", err),
     }
 
     let mut r = String::new();
     let _ = std::io::stdin().read_line(&mut r);
 
     match client.discord.clear_activity().await {
-        Ok(_) => {},
-        Err(err) => println!("{}",err)
+        Ok(_) => {}
+        Err(err) => println!("{}", err),
     }
-    
-
 
     client.discord.disconnect().await;
 

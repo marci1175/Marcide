@@ -1,10 +1,12 @@
-
 // ----------------------------------------------------------------------------
 use egui::text::LayoutJob;
 use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
 
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, /*""*/VK_B, /*[*/VK_8,/*(*/ VK_F, VK_RMENU, VK_SHIFT, VK_2 /*shft + vk_oem_3 = ( | shft + vk_oem_4 = { */};
 use serde::{Deserialize, Serialize};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+    GetAsyncKeyState, VK_2, /*shft + vk_oem_3 = ( | shft + vk_oem_4 = { */
+    /*[*/ VK_8, /*""*/ VK_B, /*(*/ VK_F, VK_RMENU, VK_SHIFT,
+};
 
 /// Memoized Code highlighting
 pub fn highlight(ctx: &egui::Context, theme: &CodeTheme, code: &str, language: &str) -> LayoutJob {
@@ -50,7 +52,7 @@ impl SyntectTheme {
         .iter()
         .copied()
     }
-    
+
     fn name(&self) -> &'static str {
         match self {
             Self::Base16EightiesDark => "Base16 Eighties (dark)",
@@ -113,12 +115,14 @@ impl CodeTheme {
     */
     pub fn from_memory(ctx: &egui::Context) -> Self {
         if ctx.style().visuals.dark_mode {
-            ctx.data_mut(|data|{
-                data.get_persisted(egui::Id::new("dark")).unwrap_or_else(|| CodeTheme::dark())
+            ctx.data_mut(|data| {
+                data.get_persisted(egui::Id::new("dark"))
+                    .unwrap_or_else(|| CodeTheme::dark())
             })
         } else {
-            ctx.data_mut(|data|{
-                data.get_persisted(egui::Id::new("light")).unwrap_or_else(|| CodeTheme::light())
+            ctx.data_mut(|data| {
+                data.get_persisted(egui::Id::new("light"))
+                    .unwrap_or_else(|| CodeTheme::light())
             })
         }
     }
@@ -240,7 +244,6 @@ pub struct CodeEditor {
     curlybracket_is_held: bool,
     quote_is_held: bool,
     sbracket_is_held: bool,
-
 }
 
 impl Default for CodeEditor {
@@ -248,16 +251,22 @@ impl Default for CodeEditor {
         Self {
             language: "py".into(),
             code: "".into(),
-            bracket_is_held: false, 
-            curlybracket_is_held: false, 
-            quote_is_held: false, 
-            sbracket_is_held: false, 
+            bracket_is_held: false,
+            curlybracket_is_held: false,
+            quote_is_held: false,
+            sbracket_is_held: false,
         }
     }
 }
 
 impl CodeEditor {
-    pub fn show(&mut self, id: Id, ui: &mut egui::Ui, scroll_offset: Vec2, go_to_offset : bool) -> Vec2 {
+    pub fn show(
+        &mut self,
+        id: Id,
+        ui: &mut egui::Ui,
+        scroll_offset: Vec2,
+        go_to_offset: bool,
+    ) -> Vec2 {
         let Self {
             language,
             code,
@@ -265,7 +274,6 @@ impl CodeEditor {
             curlybracket_is_held,
             quote_is_held,
             sbracket_is_held,
-
         } = self;
 
         let frame_rect = ui.max_rect().shrink(0.0);
@@ -276,7 +284,7 @@ impl CodeEditor {
             let mut layout_job = highlight(ui.ctx(), &theme, string, language);
             layout_job.wrap.max_width = wrap_width;
             //ui.fonts().layout_job(layout_job)
-            ui.fonts(|fonts| {fonts.layout_job(layout_job)})
+            ui.fonts(|fonts| fonts.layout_job(layout_job))
         };
 
         ui.allocate_space(ui.available_size());
@@ -292,7 +300,7 @@ impl CodeEditor {
 
         // get how many rows it takes to fill up our max rect
         let font_id = FontSelection::default().resolve(ui.style());
-        let row_height = ui.fonts(|fonts| {fonts.row_height(&font_id)});
+        let row_height = ui.fonts(|fonts| fonts.row_height(&font_id));
         let rows = ((code_rect.height() - 5.0) / row_height).floor() as usize;
 
         let text_widget = egui::TextEdit::multiline(code)
@@ -303,7 +311,6 @@ impl CodeEditor {
             .desired_width(f32::INFINITY)
             .margin(vec2(2.0, 2.0))
             .layouter(&mut layouter)
-            
             .id(id)
             .desired_rows(rows);
         let mut scroll_res = egui::ScrollArea::vertical()
@@ -315,109 +322,108 @@ impl CodeEditor {
             });
         //finder is on
         if go_to_offset {
-           scroll_res.state.offset[1] = scroll_offset.clone()[1] * 3.0;
+            scroll_res.state.offset[1] = scroll_offset.clone()[1] * 3.0;
         }
-        let eightinput = unsafe {
-            GetAsyncKeyState(VK_8 as i32)
-        };
+        let eightinput = unsafe { GetAsyncKeyState(VK_8 as i32) };
         let eight_is_pressed = (eightinput as u16 & 0x8000) != 0;
-        let twoinput = unsafe {
-            GetAsyncKeyState(VK_2 as i32)
-        };
+        let twoinput = unsafe { GetAsyncKeyState(VK_2 as i32) };
         let two_is_pressed = (twoinput as u16 & 0x8000) != 0;
-        let fimput = unsafe {
-            GetAsyncKeyState(VK_F as i32)
-        };
+        let fimput = unsafe { GetAsyncKeyState(VK_F as i32) };
         let fis_pressed = (fimput as u16 & 0x8000) != 0;
-        let shiftimput = unsafe {
-            GetAsyncKeyState(VK_SHIFT as i32)
-        };
+        let shiftimput = unsafe { GetAsyncKeyState(VK_SHIFT as i32) };
         let shift_is_pressed = (shiftimput as u16 & 0x8000) != 0;
-        let altimput = unsafe {
-            GetAsyncKeyState(VK_RMENU as i32)
-        };
+        let altimput = unsafe { GetAsyncKeyState(VK_RMENU as i32) };
         let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
-        let binput = unsafe {
-            GetAsyncKeyState(VK_B as i32)
-        };
-        let b_is_pressed = (binput as u16 & 0x8000) !=0 ;
+        let binput = unsafe { GetAsyncKeyState(VK_B as i32) };
+        let b_is_pressed = (binput as u16 & 0x8000) != 0;
         /*shft + vk_oem_3 = ( | shft + vk_oem_4 = { */
         let has_focus = ui.input(|i| i.focused);
         if has_focus {
             if shift_is_pressed && eight_is_pressed && !self.sbracket_is_held {
                 simulate::type_str(")").unwrap();
-                match simulate::release(simulate::Key::Shift){
-                    Ok(_) => {},
-                    Err(_) => {println!(r#"Paniced at ) trying to send )"#)}
+                match simulate::release(simulate::Key::Shift) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!(r#"Paniced at ) trying to send )"#)
+                    }
                 };
-                match simulate::send(simulate::Key::Left){
-                    Ok(_) => {},
-                    Err(_) => {println!(r#"Paniced at ) trying to send <-"#)}
+                match simulate::send(simulate::Key::Left) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!(r#"Paniced at ) trying to send <-"#)
+                    }
                 };
                 self.sbracket_is_held = true;
-    
-            }
-            else if !(shift_is_pressed && eight_is_pressed) {
+            } else if !(shift_is_pressed && eight_is_pressed) {
                 self.sbracket_is_held = false;
             }
-    
+
             if shift_is_pressed && two_is_pressed && !self.quote_is_held {
                 simulate::type_str(r#"""#).unwrap();
-                match simulate::release(simulate::Key::Shift){
-                    Ok(_) => {},
-                    Err(_) => {println!(r#"Paniced at " trying to send " "#)}
+                match simulate::release(simulate::Key::Shift) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!(r#"Paniced at " trying to send " "#)
+                    }
                 };
-                match simulate::send(simulate::Key::Left){
-                    Ok(_) => {},
-                    Err(_) => {println!(r#"Paniced at " trying to send <-"#)}
+                match simulate::send(simulate::Key::Left) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!(r#"Paniced at " trying to send <-"#)
+                    }
                 };
                 self.quote_is_held = true;
-            }
-            else if !(shift_is_pressed && two_is_pressed) {
+            } else if !(shift_is_pressed && two_is_pressed) {
                 self.quote_is_held = false;
             }
-    
+
             if alt_is_pressed && b_is_pressed && !self.curlybracket_is_held {
                 simulate::type_str("}").unwrap();
-                match simulate::release(simulate::Key::Shift){
-                    Ok(_) => {},
-                    Err(_) => {println!("Paniced at curlybracket trying to send curlybracket")}
+                match simulate::release(simulate::Key::Shift) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Paniced at curlybracket trying to send curlybracket")
+                    }
                 };
-                match simulate::send(simulate::Key::Left){
-                    Ok(_) => {},
-                    Err(_) => {println!("Paniced at curlybracket trying to send <-")}
+                match simulate::send(simulate::Key::Left) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Paniced at curlybracket trying to send <-")
+                    }
                 };
                 self.curlybracket_is_held = true;
-    
-            }
-            else if !(alt_is_pressed && b_is_pressed) {
+            } else if !(alt_is_pressed && b_is_pressed) {
                 self.curlybracket_is_held = false;
             }
-    
+
             if alt_is_pressed && fis_pressed && !self.bracket_is_held {
                 simulate::type_str("]").unwrap();
-                match simulate::release(simulate::Key::Shift){
-                    Ok(_) => {},
-                    Err(_) => {println!("Paniced at ] trying to send ]")}
+                match simulate::release(simulate::Key::Shift) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Paniced at ] trying to send ]")
+                    }
                 };
-                match simulate::send(simulate::Key::Left){
-                    Ok(_) => {},
-                    Err(_) => {println!("Paniced at ] trying to send <-")}
+                match simulate::send(simulate::Key::Left) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Paniced at ] trying to send <-")
+                    }
                 };
                 self.bracket_is_held = true;
-            }
-            else if !(alt_is_pressed && fis_pressed) {
-                self.bracket_is_held = false; 
+            } else if !(alt_is_pressed && fis_pressed) {
+                self.bracket_is_held = false;
             }
             if shift_is_pressed {
-                match simulate::press(simulate::Key::Shift){
-                    Ok(_) => {},
-                    Err(_) => {println!("Paniced at <- trying to send <-")}
+                match simulate::press(simulate::Key::Shift) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        println!("Paniced at <- trying to send <-")
+                    }
                 };
             }
         }
 
-        
         scroll_res.state.offset
     }
 }

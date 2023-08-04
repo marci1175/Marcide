@@ -14,8 +14,6 @@ pub struct Client {
 }
 
 pub async fn make_client(subs: ds::Subscriptions) -> Client {
-    
-
     let (wheel, handler) = ds::wheel::Wheel::new(Box::new(|err| {
         tracing::error!(error = ?err, "encountered an error");
     }));
