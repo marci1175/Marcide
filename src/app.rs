@@ -21,6 +21,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 // if we add new fields, give them default values when deserializing old state
 mod code_editor;
 mod richpresence;
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
@@ -28,7 +29,6 @@ pub struct TemplateApp {
     recv: mpsc::Receiver<String>,
     #[serde(skip)]
     sender: mpsc::Sender<String>,
-
     unsafe_mode: bool,
 
     #[serde(skip)]
@@ -102,9 +102,10 @@ pub struct TemplateApp {
 
 impl Default for TemplateApp {
     fn default() -> Self {
+        let (sender, recv) = mpsc::channel::<String>();
         Self {
-            recv: mpsc::channel::<String>().1,
-            sender: mpsc::channel::<String>().0,
+            recv,
+            sender,
             unsafe_mode: false,
             to_find: String::new(),
             terminal_help: false,
@@ -431,10 +432,16 @@ impl eframe::App for TemplateApp {
                             savetofile(files.clone(), self.text.clone());
                             //run file
                             self.output_window_is_open = true;
-                            self.output = String::from_utf8_lossy(
-                                &runfile(files.clone(), self.language.clone()).stdout,
-                            )
-                            .to_string();
+                                let lang = self.language.clone();
+                                let s = self.sender.clone();
+                                std::thread::spawn(move || {
+                                    let out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    ).to_string();
+
+                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    println!("{}", out);
+                                });
                         }
                     } else {
                         let files = self.last_save_path.clone();
