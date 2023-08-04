@@ -394,7 +394,7 @@ impl CodeEditor {
                 self.curlybracket_is_held = false;
             }
     
-            if alt_is_pressed && fis_pressed && !alt_is_pressed && !self.bracket_is_held {
+            if alt_is_pressed && fis_pressed && !self.bracket_is_held {
                 simulate::type_str("]").unwrap();
                 match simulate::release(simulate::Key::Shift){
                     Ok(_) => {},
@@ -406,7 +406,7 @@ impl CodeEditor {
                 };
                 self.bracket_is_held = true;
             }
-            else if !(alt_is_pressed && fis_pressed && !alt_is_pressed) {
+            else if !(alt_is_pressed && fis_pressed) {
                 self.bracket_is_held = false; 
             }
             if shift_is_pressed {
