@@ -412,7 +412,7 @@ impl CodeEditor {
             if shift_is_pressed {
                 match simulate::press(simulate::Key::Shift){
                     Ok(_) => {},
-                    Err(_) => {}
+                    Err(_) => {println!("Paniced at <- trying to send <-")}
                 };
             }
         }
