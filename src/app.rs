@@ -1,8 +1,6 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 use egui::{Color32, RichText, TextBuffer, Vec2};
-use ::mpsc::Receiver;
-use ::mpsc::Sender;
 use rfd::FileDialog;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -10,7 +8,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_F, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
@@ -679,8 +677,8 @@ impl eframe::App for TemplateApp {
                                 std::thread::spawn(move || {
                                     let out = String::from_utf8_lossy(
                                         &runfile(files.clone(), lang).stdout,
-                                    )
-                                    .to_string();
+                                    ).to_string();
+
                                     s.send(out.clone()).expect("Couldnt send msg");
                                     println!("{}", out);
                                 });
