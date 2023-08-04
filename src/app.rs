@@ -1,6 +1,8 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 use egui::{Color32, RichText, TextBuffer, Vec2};
+use ::mpsc::Receiver;
+use ::mpsc::Sender;
 use rfd::FileDialog;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -25,7 +27,10 @@ mod richpresence;
 #[serde(default)]
 pub struct TemplateApp {
     #[serde(skip)]
-    recv: mpsc::channel<String>,
+    recv: mpsc::Receiver<String>,
+    #[serde(skip)]
+    sender: mpsc::Sender<String>,
+
     unsafe_mode: bool,
 
     #[serde(skip)]
@@ -101,6 +106,7 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             recv: mpsc::channel::<String>().1,
+            sender: mpsc::channel::<String>().0,
             unsafe_mode: false,
             to_find: String::new(),
             terminal_help: false,
@@ -312,9 +318,8 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let (s, r) = mpsc::channel::<String>();
         let mut go_to_offset: bool = false;
-        match r.try_recv() {
+        match self.recv.try_recv() {
             Ok(ok) => {
                 self.output = ok;
             }
@@ -670,6 +675,7 @@ impl eframe::App for TemplateApp {
                                 //run file
                                 self.output_window_is_open = true;
                                 let lang = self.language.clone();
+                                let s = self.sender.clone();
                                 std::thread::spawn(move || {
                                     let out = String::from_utf8_lossy(
                                         &runfile(files.clone(), lang).stdout,
