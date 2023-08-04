@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer, Vec2};
@@ -33,6 +34,9 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     spotify_window_is_open: bool,
+
+    #[serde(skip)]
+    terminal_help: bool,
 
     #[serde(skip)]
     window_title: String,
@@ -93,7 +97,7 @@ impl Default for TemplateApp {
         Self {
             unsafe_mode: false,
             to_find: String::new(),
-
+            terminal_help: false,
             output: String::new(),
             output_window_is_open: false,
             spotify_window_is_open: false,
@@ -130,6 +134,13 @@ impl TemplateApp {
         
         Default::default()
     }
+}
+fn newcmd(){
+    let newcmd = std::process::Command::new("powershell")
+        .arg("-C")
+        .arg("start cmd.exe")
+        .spawn();
+    
 }
 fn finder(text : String, to_find : String) -> io::Result<Vec<usize>> {
     //let reader = BufReader::new(file);
@@ -409,8 +420,20 @@ impl eframe::App for TemplateApp {
                             //save file
                             savetofile(files.clone(), self.text.clone());
                             //run file
-                            self.output_window_is_open = true;
-                            self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
+                                self.output_window_is_open = true;
+
+                                let lang = self.language.clone();
+                                let shared_result = Arc::new(Mutex::new(String::new()));
+                                let shared_result_clone = Arc::clone(&shared_result);
+                                
+                                std::thread::spawn(move || {
+                                    let result = String::from_utf8_lossy(&runfile(files.clone(), lang.clone()).stdout).to_string();
+                                    let mut shared_result = shared_result_clone.lock().unwrap();
+                                    *shared_result = result;
+                                });
+                                
+                                let result = shared_result.lock().unwrap().to_string();
+                                self.output = result;
                                       
                             }
                         }
@@ -509,6 +532,15 @@ impl eframe::App for TemplateApp {
             });
         }
         */
+        if self.terminal_help{
+            egui::Window::new("Help")
+                .default_size((300.0,300.0))
+                .open(&mut self.terminal_help)
+                .show(ctx, |ui|{
+                    ui.label("How to add a module to python?");
+                    ui.text_edit_singleline(&mut "py -m pip install {your_module_name}");
+            });
+        }
         //autosave implementation
         if self.last_save_path.is_some() {
             //define recv sender
@@ -594,6 +626,7 @@ impl eframe::App for TemplateApp {
                 let save = ui.button("Save");
                 let save_as = ui.button("Save as");
                 let open = ui.button("Open");
+                let terminal = ui.button("Terminal");
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
                 if run.clicked() {
@@ -613,8 +646,17 @@ impl eframe::App for TemplateApp {
                                 savetofile(files.clone(), self.text.clone());
                                 //run file
                                 self.output_window_is_open = true;
-                                self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
-
+                                let lang = self.language.clone();
+                                let shared_result = Arc::new(Mutex::new(String::new()));
+                                let shared_result_clone = Arc::clone(&shared_result);
+                                std::thread::spawn(move || {
+                                    let result = String::from_utf8_lossy(&runfile(files.clone(), lang.clone()).stdout).to_string();
+                                    let mut shared_result = shared_result_clone.lock().unwrap();
+                                    *shared_result = result;
+                                });
+                                
+                                let result = shared_result.lock().unwrap().to_string();
+                                self.output = result;
                                 }
                             }
                             else {
@@ -677,6 +719,10 @@ impl eframe::App for TemplateApp {
                 }
                 if settings.clicked(){
                     self.settings_window_is_open = !self.settings_window_is_open;
+                }
+                if terminal.clicked(){
+                    newcmd();
+                    self.terminal_help = !self.terminal_help;
                 }
                 if support.clicked(){
                     match webbrowser::open("https://discord.gg/7s3VRr4H6j"){
