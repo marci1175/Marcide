@@ -1,8 +1,9 @@
 
 // ----------------------------------------------------------------------------
-
 use egui::text::LayoutJob;
 use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
+
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, /*""*/VK_B, /*[*/VK_8,/*(*/ VK_F, VK_RMENU, VK_SHIFT, VK_2 /*shft + vk_oem_3 = ( | shft + vk_oem_4 = { */};
 use serde::{Deserialize, Serialize};
 
 /// Memoized Code highlighting
@@ -235,6 +236,11 @@ fn as_byte_range(whole: &str, range: &str) -> std::ops::Range<usize> {
 pub struct CodeEditor {
     pub language: String,
     pub code: String,
+    bracket_is_held: bool,
+    curlybracket_is_held: bool,
+    quote_is_held: bool,
+    sbracket_is_held: bool,
+
 }
 
 impl Default for CodeEditor {
@@ -242,13 +248,25 @@ impl Default for CodeEditor {
         Self {
             language: "py".into(),
             code: "".into(),
+            bracket_is_held: false, 
+            curlybracket_is_held: false, 
+            quote_is_held: false, 
+            sbracket_is_held: false, 
         }
     }
 }
 
 impl CodeEditor {
     pub fn show(&mut self, id: Id, ui: &mut egui::Ui, scroll_offset: Vec2, go_to_offset : bool) -> Vec2 {
-        let Self { language, code } = self;
+        let Self {
+            language,
+            code,
+            bracket_is_held,
+            curlybracket_is_held,
+            quote_is_held,
+            sbracket_is_held,
+
+        } = self;
 
         let frame_rect = ui.max_rect().shrink(0.0);
         let code_rect = frame_rect.shrink(5.0);
@@ -299,7 +317,106 @@ impl CodeEditor {
         if go_to_offset {
            scroll_res.state.offset[1] = scroll_offset.clone()[1] * 3.0;
         }
-        
+        let eightinput = unsafe {
+            GetAsyncKeyState(VK_8 as i32)
+        };
+        let eight_is_pressed = (eightinput as u16 & 0x8000) != 0;
+        let twoinput = unsafe {
+            GetAsyncKeyState(VK_2 as i32)
+        };
+        let two_is_pressed = (twoinput as u16 & 0x8000) != 0;
+        let fimput = unsafe {
+            GetAsyncKeyState(VK_F as i32)
+        };
+        let fis_pressed = (fimput as u16 & 0x8000) != 0;
+        let shiftimput = unsafe {
+            GetAsyncKeyState(VK_SHIFT as i32)
+        };
+        let shift_is_pressed = (shiftimput as u16 & 0x8000) != 0;
+        let altimput = unsafe {
+            GetAsyncKeyState(VK_RMENU as i32)
+        };
+        let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
+        let binput = unsafe {
+            GetAsyncKeyState(VK_B as i32)
+        };
+        let b_is_pressed = (binput as u16 & 0x8000) !=0 ;
+        /*shft + vk_oem_3 = ( | shft + vk_oem_4 = { */
+        let has_focus = ui.input(|i| i.focused);
+        if has_focus {
+            if shift_is_pressed && eight_is_pressed && !self.sbracket_is_held {
+                simulate::type_str(")").unwrap();
+                match simulate::release(simulate::Key::Shift){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                match simulate::send(simulate::Key::Left){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                self.sbracket_is_held = true;
+    
+            }
+            else if !(shift_is_pressed && eight_is_pressed) {
+                self.sbracket_is_held = false;
+            }
+    
+            if shift_is_pressed && two_is_pressed && !self.quote_is_held {
+                simulate::type_str(r#"""#).unwrap();
+                match simulate::release(simulate::Key::Shift){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                match simulate::send(simulate::Key::Left){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                self.quote_is_held = true;
+            }
+            else if !(shift_is_pressed && two_is_pressed) {
+                self.quote_is_held = false;
+            }
+    
+            if alt_is_pressed && b_is_pressed && !self.curlybracket_is_held {
+                simulate::type_str("}").unwrap();
+                match simulate::release(simulate::Key::Shift){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                match simulate::send(simulate::Key::Left){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                self.curlybracket_is_held = true;
+    
+            }
+            else if !(alt_is_pressed && b_is_pressed) {
+                self.curlybracket_is_held = false;
+            }
+    
+            if alt_is_pressed && fis_pressed && !alt_is_pressed && !self.bracket_is_held {
+                simulate::type_str("]").unwrap();
+                match simulate::release(simulate::Key::Shift){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                match simulate::send(simulate::Key::Left){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+                self.bracket_is_held = true;
+            }
+            else if !(alt_is_pressed && fis_pressed && !alt_is_pressed) {
+                self.bracket_is_held = false; 
+            }
+            if shift_is_pressed {
+                match simulate::press(simulate::Key::Shift){
+                    Ok(_) => {},
+                    Err(_) => {}
+                };
+            }
+        }
+
         
         scroll_res.state.offset
     }

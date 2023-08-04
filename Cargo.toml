@@ -44,6 +44,7 @@ tokio = {version = "1.29.1", features = ["full"]}
 anyhow = "1.0.72"
 tracing-subscriber = "0.3"
 embed-resource = "2.2.0"
+simulate = "0.3.0"
 
 
 [build-dependencies]

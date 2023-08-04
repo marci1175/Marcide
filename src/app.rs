@@ -3,16 +3,15 @@ use std::path::PathBuf;
 use egui::{RichText, Color32, TextBuffer, Vec2};
 use rfd::FileDialog;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR,MB_YESNOCANCEL, MB_ICONEXCLAMATION, MB_OK};
-use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F, VK_O, VK_R, VK_T, VK_N};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_S, VK_CONTROL, VK_F, VK_O, VK_R, VK_T, VK_N, VK_RMENU};
 use windows_sys::w;
 use std::fs::OpenOptions;
 use self::code_editor::CodeEditor;
 use std::io;
 use std::io::{Write, Read};
 use std::fs::File;
-use rand::Rng;
 use dirs::home_dir;
-
+//mod gks;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
  // if we add new fields, give them default values when deserializing old state
 mod code_editor;
@@ -20,12 +19,11 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+ 
+    unsafe_mode: bool,
 
     #[serde(skip)]
     to_find: String,
-    
-    #[serde(skip)]
-    errout: String,
 
     #[serde(skip)]
     output: String,
@@ -41,7 +39,7 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     settings_window_is_open: bool,
-
+    
     auto_save_to_ram: bool,
 
     auto_save: bool,
@@ -93,8 +91,9 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            unsafe_mode: false,
             to_find: String::new(),
-            errout: String::new(),
+
             output: String::new(),
             output_window_is_open: false,
             spotify_window_is_open: false,
@@ -174,13 +173,30 @@ fn rmdir() {
     }
 }
 fn runfile(path : Option<PathBuf>, language : String) -> std::process::Output {
+    //first check if the env variables are set
+    let env = std::process::Command::new(language.clone()).output();
+    match env {
+        Ok(_) => {/*Env variable found*/},
+        Err(_) => {
+            //notify user
+            println!("env varaible not found");
+            unsafe {
+                MessageBoxW(0,  w!("Troubleshoot : did you add the compiler to the PATH system variable?\nDid you check the spelling of which programming language you want to syntax?"), w!("Fatal error"), MB_ICONERROR | MB_OK)
+            };
+            }
+    }
     let command_to_be_excecuted = format!("{} {}",/*lang if first asked so we can decide which script compiler needs to be run ie: py test.py or lua test.lua */ language, path.unwrap().display());
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")   
         .arg(command_to_be_excecuted)    
         .output();
     match cmdcomm {
-        Ok(ok) => {ok}
+        Ok(mut ok) => {
+            if ok.stdout.len() == 0 {
+                ok.stdout = ok.stderr.clone();
+            };
+            ok
+        }
         Err(_) => {unsafe { MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK) }; cmdcomm.unwrap()}
     }
 }
@@ -257,7 +273,9 @@ impl eframe::App for TemplateApp {
     }
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        
+        if !self.auto_save_to_ram {
+            self.code_editor.code.clear();
+        }
         eframe::set_value(storage, eframe::APP_KEY, self);
         
     }
@@ -297,10 +315,6 @@ impl eframe::App for TemplateApp {
         
         //title logic for * when unsaved
         
-        if !self.auto_save_to_ram {
-            self.code_editor.code.clear();
-        }
-        
         //hotkeys
         if let Some(wintitle) = self.last_save_path.clone(){
             if let Some(file_name) = wintitle.file_name() {
@@ -315,7 +329,11 @@ impl eframe::App for TemplateApp {
         }
         
         _frame.set_window_title(self.window_title.as_str());
-
+        //get alt input => if true ctrl => false
+        let altimput = unsafe {
+            GetAsyncKeyState(VK_RMENU as i32)
+        };
+        let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
         let nimput = unsafe {
             GetAsyncKeyState(VK_N as i32)
         };
@@ -336,7 +354,7 @@ impl eframe::App for TemplateApp {
         let ctrlimput = unsafe {
             GetAsyncKeyState(VK_CONTROL as i32)
         };
-        let ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
+        let mut ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
         //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
         let sinp = unsafe {
              GetAsyncKeyState(VK_S as i32)
@@ -348,6 +366,9 @@ impl eframe::App for TemplateApp {
         };
         let fis_pressed = (fimput as u16 & 0x8000) != 0;
         //save hotkey
+        if alt_is_pressed {
+            ctrlis_pressed = false;
+        }
         if sis_pressed && ctrlis_pressed && has_focus {
             if self.last_save_path.is_some() {
                 savetofile(self.last_save_path.clone(), self.text.clone());
@@ -373,14 +394,14 @@ impl eframe::App for TemplateApp {
         }
         if ctrlis_pressed && ris_pressed && has_focus {
             if !self.output_window_is_open {
-                if self.language == "py" || self.language == "lua" {
+                if self.unsafe_mode || self.language == "py" || self.language == "lua" {
                     //save to temp folder
                     if self.last_save_path.is_none() {
                         mkdir();
                         //C:\Users\%user_name%\marcide.temp
                         if let Some(mut home_dir) = home_dir() {
    
-                            let to_push = format!("%marcide.temp%\\{}.{}", "tempfile", self.language);
+                            let to_push = format!("%marcide.temp%\\temp.{}", self.language);
                             home_dir.push(to_push);
                     
                             // Set the files variable
@@ -390,10 +411,6 @@ impl eframe::App for TemplateApp {
                             //run file
                             self.output_window_is_open = true;
                             self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
-                            
-                            if self.output.len() == 0{
-                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
-                            }
                                       
                             }
                         }
@@ -402,14 +419,11 @@ impl eframe::App for TemplateApp {
                             self.output_window_is_open = true;
                             self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
                             
-                            if self.output.len() == 0{
-                                self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
-                            }
                         }
                 }
                 else {
                     unsafe{
-                        MessageBoxW(0,  w!("This ide can only run .lua, and .py files out of box"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
+                        MessageBoxW(0,  w!("This ide can only run .lua, and .py files safely\nIf you want to run something with a different extension, turn on unsafe mode"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
                     }
                 }
             }
@@ -452,15 +466,8 @@ impl eframe::App for TemplateApp {
             egui::Window::new("Output")
             .open(&mut self.output_window_is_open)
             .show(ctx, |ui| {
-                if self.output.len() != 0 {
-                    ui.label(RichText::from("Success").size(25.0).color(Color32::from_rgb(0, 255, 0)));
-                    ui.label(RichText::from(self.output.clone()).size(20.0).color(Color32::from_rgb(255, 255, 255)));
-                }
-                else {
-                    ui.label(RichText::from("Fail").size(25.0).color(Color32::from_rgb(255, 0, 0)));
-                    ui.label(RichText::from(self.errout.clone()).size(20.0).color(Color32::from_rgb(255, 255, 255)));
-                }
-                
+                ui.label(RichText::from("Output").size(25.0).color(Color32::from_rgb(92, 92, 92)));
+                ui.label(RichText::from(self.output.clone()).size(20.0).color(Color32::from_rgb(255, 255, 255)));
             });
         }
         if self.finder_is_open{
@@ -562,6 +569,10 @@ impl eframe::App for TemplateApp {
                         ui.label("Had so much fun developing this lol.");
                         ui.hyperlink_to("Github", "https://github.com/marci1175");
                     }
+                    ui.checkbox(&mut self.unsafe_mode, "Unsafe mode");
+                    if self.unsafe_mode {
+                        ui.label("With unsafe mode on you can try running any programming language");
+                    }
                 });
         }
         egui::TopBottomPanel::top("Settings").show(ctx, |ui|{
@@ -586,17 +597,14 @@ impl eframe::App for TemplateApp {
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
                 if run.clicked() {
-                    if self.language == "py" || self.language == "lua" {
+                    if self.unsafe_mode || self.language == "py" || self.language == "lua" {
                         //save to temp folder
                         if self.last_save_path.is_none() {
                             mkdir();
                             //C:\Users\%user_name%\marcide.temp
                             if let Some(mut home_dir) = home_dir() {
-                                let mut rng = rand::thread_rng();
 
-            
-                                let random_number = rng.gen_range(1..=100000000);
-                                let to_push = format!("%marcide.temp%\\{}.{}", random_number, self.language);
+                                let to_push = format!("%marcide.temp%\\temp.{}", self.language);
                                 home_dir.push(to_push);
                         
                                 // Set the files variable
@@ -606,22 +614,15 @@ impl eframe::App for TemplateApp {
                                 //run file
                                 self.output_window_is_open = true;
                                 self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
-                                
-                                if self.output.len() == 0{
-                                    self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
-                                }
-                                          
+
                                 }
                             }
                             else {
                                 let files = self.last_save_path.clone();
                                 self.output_window_is_open = true;
                                 self.output = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stdout).to_string();
-                                
-                                if self.output.len() == 0{
-                                    self.errout = String::from_utf8_lossy(&runfile(files.clone(), self.language.clone()).stderr).to_string();    
+
                                 }
-                            }
                     }
                     else {
                         unsafe{
@@ -678,7 +679,7 @@ impl eframe::App for TemplateApp {
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
                 if support.clicked(){
-                    match webbrowser::open("https://discord.gg/hT9JdwgbQv"){
+                    match webbrowser::open("https://discord.gg/7s3VRr4H6j"){
                         Ok(_) => {},
                         Err(_) => {}
                     };

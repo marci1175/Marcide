@@ -1,7 +1,6 @@
 use std::time::SystemTime;
 mod dependencies;
 use dependencies::{self as es, anyhow, ds, tokio, tracing};
-use ds::activity::Assets;
 
 #[tokio::main]
 pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Error> {
@@ -29,7 +28,7 @@ pub async fn rpc(projname : String, projstart : String) -> Result<(), anyhow::Er
         })
         .button(ds::activity::Button {
             label: "Marcide Official discord".to_owned(),
-            url: "https://discord.gg/hT9JdwgbQv".to_owned(),
+            url: "https://discord.gg/7s3VRr4H6j".to_owned(),
         })
         .start_timestamp(SystemTime::now());
 
