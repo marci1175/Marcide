@@ -128,7 +128,7 @@ impl Default for TemplateApp {
             session_started: chrono::Local::now(),
             settings_window_is_open: false,
             auto_save: true,
-            terminal_mode : false,
+            terminal_mode: false,
             auto_save_to_ram: false,
             text: String::new(),
             language: "py".into(),
@@ -160,10 +160,7 @@ impl TemplateApp {
     }
 }
 fn terminalr(path: Option<PathBuf>) -> std::process::Output {
-    let command_to_be_excecuted = format!(
-        "{}",
-        path.unwrap().display()
-    );
+    let command_to_be_excecuted = format!("{}", path.unwrap().display());
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")
         .arg(command_to_be_excecuted)
@@ -292,22 +289,20 @@ fn savetofile(path: Option<PathBuf>, text: String) {
             .create(true)
             .truncate(true)
             .write(true)
-            .open(file_path.clone()){
-                Ok(mut file) => {
-                    match write!(file, "{}", text) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("Error opening the file : {}", e);
-                        }
-                    }
-                },
-                Err(err) => {
-                    println!("Err : {}", err);
+            .open(file_path.clone())
+        {
+            Ok(mut file) => match write!(file, "{}", text) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error opening the file : {}", e);
                 }
-            };
+            },
+            Err(err) => {
+                println!("Err : {}", err);
+            }
+        };
 
         // Write some data to the file
-        
     }
 }
 impl eframe::App for TemplateApp {
@@ -362,7 +357,7 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.code_editor_text_lenght > self.code_editor.code.len(){
+        if self.code_editor_text_lenght > self.code_editor.code.len() {
             self.code_editor_text_lenght = self.code_editor.code.len();
         }
         let mut go_to_offset: bool = false;
@@ -465,7 +460,11 @@ impl eframe::App for TemplateApp {
         }
         if ctrlis_pressed && ris_pressed && has_focus {
             if !self.output_window_is_open {
-                if self. terminal_mode || self.unsafe_mode || self.language == "py" || self.language == "lua" {
+                if self.terminal_mode
+                    || self.unsafe_mode
+                    || self.language == "py"
+                    || self.language == "lua"
+                {
                     //save to temp folder
                     if self.last_save_path.is_none() {
                         mkdir();
@@ -481,37 +480,43 @@ impl eframe::App for TemplateApp {
                             //run file
                             let terminalm = self.terminal_mode.clone();
                             self.output_window_is_open = true;
-                                let lang = self.language.clone();
-                                let s = self.sender.clone();
-                                std::thread::spawn(move || {
-                                    let mut _out: String = String::new();
-                                    if !terminalm {
-                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
-                                    }
-                                    else {
-                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
-                                    }
+                            let lang = self.language.clone();
+                            let s = self.sender.clone();
+                            std::thread::spawn(move || {
+                                let mut _out: String = String::new();
+                                if !terminalm {
+                                    _out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    )
+                                    .to_string();
+                                } else {
+                                    _out =
+                                        String::from_utf8_lossy(&terminalr(files.clone()).stdout)
+                                            .to_string();
+                                }
 
-                                    s.send(_out.clone()).expect("Couldnt send msg");
-                                });
+                                s.send(_out.clone()).expect("Couldnt send msg");
+                            });
                         }
                     } else {
                         let files = self.last_save_path.clone();
                         self.output_window_is_open = true;
                         let terminalm = self.terminal_mode.clone();
-                                let lang = self.language.clone();
-                                let s = self.sender.clone();
-                                std::thread::spawn(move || {
-                                    let mut _out: String = String::new();
-                                    if !terminalm {
-                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
-                                    }
-                                    else {
-                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
-                                    }
+                        let lang = self.language.clone();
+                        let s = self.sender.clone();
+                        std::thread::spawn(move || {
+                            let mut _out: String = String::new();
+                            if !terminalm {
+                                _out =
+                                    String::from_utf8_lossy(&runfile(files.clone(), lang).stdout)
+                                        .to_string();
+                            } else {
+                                _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout)
+                                    .to_string();
+                            }
 
-                                    s.send(_out.clone()).expect("Couldnt send msg");
-                                });
+                            s.send(_out.clone()).expect("Couldnt send msg");
+                        });
                     }
                 } else {
                     unsafe {
@@ -626,15 +631,15 @@ impl eframe::App for TemplateApp {
 
             let tx = self.autosave_sender.get_or_insert_with(|| {
                 let (tx, rx) = mpsc::channel::<String>();
-                
+
                 std::thread::spawn(move || loop {
                     match rx.try_recv() {
-                        Ok(text) => {  
+                        Ok(text) => {
                             //println!("{}", lines[1]);
-                            let lines: Vec<&str> = text.split("VxpAM$616*9Y8G%tOp$en*KDJ").collect();
-                            
-                            savetofile(Some(PathBuf::from(lines[1].trim())), lines[0].to_string());
+                            let lines: Vec<&str> =
+                                text.split("VxpAM$616*9Y8G%tOp$en*KDJ").collect();
 
+                            savetofile(Some(PathBuf::from(lines[1].trim())), lines[0].to_string());
                         }
                         Err(_) => {
                             //"SzeRinTetEk tuDja A hArmAdiK szAbÁLyT?"
@@ -651,8 +656,8 @@ impl eframe::App for TemplateApp {
                         path.to_str().unwrap_or_default().to_string()
                     );
                     if self.code_editor_text_lenght < self.code_editor.code.len() {
-                        match tx.send(data_to_send){
-                            Ok(_) => {},
+                        match tx.send(data_to_send) {
+                            Ok(_) => {}
                             Err(_) => {}
                         };
                         self.code_editor_text_lenght = self.code_editor.code.len();
@@ -725,7 +730,6 @@ impl eframe::App for TemplateApp {
                         );
                         ui.checkbox(&mut self.terminal_mode, "Terminal mode");
                     }
-                    
                     if self.terminal_mode {
                         ui.label("You can use marcide to excecute terminal commands");
                     }
@@ -754,7 +758,11 @@ impl eframe::App for TemplateApp {
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
                 if run.clicked() {
-                    if self.terminal_mode || self.unsafe_mode || self.language == "py" || self.language == "lua" {
+                    if self.terminal_mode
+                        || self.unsafe_mode
+                        || self.language == "py"
+                        || self.language == "lua"
+                    {
                         //save to temp folder
                         if self.last_save_path.is_none() {
                             mkdir();
@@ -775,10 +783,15 @@ impl eframe::App for TemplateApp {
                                 std::thread::spawn(move || {
                                     let mut _out: String = String::new();
                                     if !terminalm {
-                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
-                                    }
-                                    else {
-                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(
+                                            &runfile(files.clone(), lang).stdout,
+                                        )
+                                        .to_string();
+                                    } else {
+                                        _out = String::from_utf8_lossy(
+                                            &terminalr(files.clone()).stdout,
+                                        )
+                                        .to_string();
                                     }
 
                                     s.send(_out.clone()).expect("Couldnt send msg");
@@ -787,20 +800,24 @@ impl eframe::App for TemplateApp {
                         } else {
                             let files = self.last_save_path.clone();
                             self.output_window_is_open = true;
-                                let lang = self.language.clone();
-                                let terminalm = self.terminal_mode.clone();
-                                let s = self.sender.clone();
-                                std::thread::spawn(move || {
-                                    let mut _out: String = String::new();
-                                    if !terminalm {
-                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
-                                    }
-                                    else {
-                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
-                                    }
+                            let lang = self.language.clone();
+                            let terminalm = self.terminal_mode.clone();
+                            let s = self.sender.clone();
+                            std::thread::spawn(move || {
+                                let mut _out: String = String::new();
+                                if !terminalm {
+                                    _out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    )
+                                    .to_string();
+                                } else {
+                                    _out =
+                                        String::from_utf8_lossy(&terminalr(files.clone()).stdout)
+                                            .to_string();
+                                }
 
-                                    s.send(_out.clone()).expect("Couldnt send msg");
-                                });
+                                s.send(_out.clone()).expect("Couldnt send msg");
+                            });
                         }
                     } else {
                         unsafe {
