@@ -250,19 +250,27 @@ fn openfile(path: Option<PathBuf>) -> String {
 }
 fn savetofile(path: Option<PathBuf>, text: String) {
     if let Some(file_path) = path {
-        let mut file = OpenOptions::new()
+        println!("{:?}", file_path.clone());
+        let mut file = match OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
-            .open(file_path.clone())
-            .expect("wrong folder dumbass");
+            .open(file_path.clone()){
+                Ok(mut file) => {
+                    match write!(file, "{}", text) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Error opening the file : {}", e);
+                        }
+                    }
+                },
+                Err(err) => {
+                    println!("Err : {}", err);
+                }
+            };
+
         // Write some data to the file
-        match write!(file, "{}", text) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Error opening the file : {}", e);
-            }
-        }
+        
     }
 }
 impl eframe::App for TemplateApp {
@@ -404,7 +412,7 @@ impl eframe::App for TemplateApp {
                     .save_file();
                 if files.clone().is_some() {
                     self.last_save_path = files.clone();
-                    savetofile(files.clone(), self.text.clone());
+                    savetofile(self.last_save_path.clone(), self.text.clone());
                     self.code_editor_text_lenght = self.code_editor.code.len();
                 }
             }
@@ -440,16 +448,20 @@ impl eframe::App for TemplateApp {
                                     ).to_string();
 
                                     s.send(out.clone()).expect("Couldnt send msg");
-                                    println!("{}", out);
                                 });
                         }
                     } else {
                         let files = self.last_save_path.clone();
                         self.output_window_is_open = true;
-                        self.output = String::from_utf8_lossy(
-                            &runfile(files.clone(), self.language.clone()).stdout,
-                        )
-                        .to_string();
+                                let lang = self.language.clone();
+                                let s = self.sender.clone();
+                                std::thread::spawn(move || {
+                                    let out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    ).to_string();
+
+                                    s.send(out.clone()).expect("Couldnt send msg");
+                                });
                     }
                 } else {
                     unsafe {
@@ -567,9 +579,12 @@ impl eframe::App for TemplateApp {
                 std::thread::spawn(move || loop {
                     //reciver, text always gets updated
                     match rx.try_recv() {
-                        Ok(text) => {
-                            let lines: Vec<&str> = text.lines().collect();
-                            savetofile(Some(PathBuf::from(lines[1])), lines[0].to_string());
+                        Ok(text) => {  
+                            //println!("{}", lines[1]);
+                            let lines: Vec<&str> = text.split("VxpAM$616*9Y8G%tOp$en*KDJ").collect();
+                            
+                            savetofile(Some(PathBuf::from(lines[1].trim())), lines[0].to_string());
+
                         }
                         Err(_) => {
                             //code editor didnt recive new input, shit on it
@@ -581,12 +596,15 @@ impl eframe::App for TemplateApp {
             if self.auto_save {
                 if let Some(path) = self.last_save_path.clone() {
                     let data_to_send: String = format!(
-                        "{}\n{}",
+                        "{} VxpAM$616*9Y8G%tOp$en*KDJ {}",
                         self.code_editor.code.clone(),
                         path.to_str().unwrap_or_default().to_string()
                     );
                     if self.code_editor_text_lenght < self.code_editor.code.len() {
-                        tx.send(data_to_send).expect("Unable to send msg");
+                        match tx.send(data_to_send){
+                            Ok(_) => {},
+                            Err(_) => {}
+                        };
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                 }
@@ -687,16 +705,20 @@ impl eframe::App for TemplateApp {
                                     ).to_string();
 
                                     s.send(out.clone()).expect("Couldnt send msg");
-                                    println!("{}", out);
                                 });
                             }
                         } else {
                             let files = self.last_save_path.clone();
                             self.output_window_is_open = true;
-                            self.output = String::from_utf8_lossy(
-                                &runfile(files.clone(), self.language.clone()).stdout,
-                            )
-                            .to_string();
+                                let lang = self.language.clone();
+                                let s = self.sender.clone();
+                                std::thread::spawn(move || {
+                                    let out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    ).to_string();
+
+                                    s.send(out.clone()).expect("Couldnt send msg");
+                                });
                         }
                     } else {
                         unsafe {
