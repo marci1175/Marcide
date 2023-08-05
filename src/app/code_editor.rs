@@ -270,10 +270,10 @@ impl CodeEditor {
         let Self {
             language,
             code,
-            bracket_is_held,
-            curlybracket_is_held,
-            quote_is_held,
-            sbracket_is_held,
+            bracket_is_held: _,
+            curlybracket_is_held: _,
+            quote_is_held: _,
+            sbracket_is_held: _,
         } = self;
 
         let frame_rect = ui.max_rect().shrink(0.0);

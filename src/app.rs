@@ -2,7 +2,6 @@ use self::code_editor::CodeEditor;
 use dirs::home_dir;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
-use syntect::highlighting::Color;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
@@ -160,8 +159,11 @@ impl TemplateApp {
         Default::default()
     }
 }
-fn terminalmode(code : String) -> std::process::Output {
-    let command_to_be_excecuted = format!("{}", code);
+fn terminalr(path: Option<PathBuf>) -> std::process::Output {
+    let command_to_be_excecuted = format!(
+        "{}",
+        path.unwrap().display()
+    );
     let cmdcomm = std::process::Command::new("cmd")
         .arg("/C")
         .arg(command_to_be_excecuted)
@@ -182,7 +184,7 @@ fn terminalmode(code : String) -> std::process::Output {
     }
 }
 fn newcmd() {
-    let newcmd = std::process::Command::new("powershell")
+    let _ = std::process::Command::new("powershell")
         .arg("-C")
         .arg("start cmd.exe")
         .spawn();
@@ -286,8 +288,7 @@ fn openfile(path: Option<PathBuf>) -> String {
 }
 fn savetofile(path: Option<PathBuf>, text: String) {
     if let Some(file_path) = path {
-        println!("{:?}", file_path.clone());
-        let mut file = match OpenOptions::new()
+        match OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
@@ -378,8 +379,8 @@ impl eframe::App for TemplateApp {
             std::thread::spawn(move || loop {
                 //reciver, text always gets updated
                 match rx.try_recv() {
-                    Ok(text) => {
-                        match richpresence::rpc(text, starttime.clone()) {
+                    Ok(_ /* Failed attempt to make a changing rcp based on filename */) => {
+                        match richpresence::rpc(starttime.clone()) {
                             Err(err) => println!("Richpresence failed : {}", err),
                             Ok(_) => {}
                         };
@@ -479,39 +480,37 @@ impl eframe::App for TemplateApp {
                             savetofile(files.clone(), self.text.clone());
                             //run file
                             let terminalm = self.terminal_mode.clone();
-                            let code = self.code_editor.code.clone();
                             self.output_window_is_open = true;
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let mut out: String = String::new();
+                                    let mut _out: String = String::new();
                                     if !terminalm {
-                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
                                     }
                                     else {
-                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
                                     }
 
-                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    s.send(_out.clone()).expect("Couldnt send msg");
                                 });
                         }
                     } else {
                         let files = self.last_save_path.clone();
                         self.output_window_is_open = true;
                         let terminalm = self.terminal_mode.clone();
-                            let code = self.code_editor.code.clone();
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let mut out: String = String::new();
+                                    let mut _out: String = String::new();
                                     if !terminalm {
-                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
                                     }
                                     else {
-                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
                                     }
 
-                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    s.send(_out.clone()).expect("Couldnt send msg");
                                 });
                     }
                 } else {
@@ -712,13 +711,21 @@ impl eframe::App for TemplateApp {
                     else {
                         self.is_gui_development = false;
                     }
+                    if self.language == "bat" || self.language == "cmd" || self.language == "ps1" || self.language == "vbs" || self.language == "wsf" || self.language == "reg" {
+                        self.terminal_mode = true;
+                        ui.label(RichText::from("Terminal mode is on, but syntaxing is unavailable").color(Color32::LIGHT_YELLOW));
+                    }
+                    else if !self.unsafe_mode {
+                        self.terminal_mode = false;
+                    }
                     ui.checkbox(&mut self.unsafe_mode, "Unsafe mode");
                     if self.unsafe_mode {
                         ui.label(
                             "With unsafe mode on you can try running any programming language added to PATH",
                         );
+                        ui.checkbox(&mut self.terminal_mode, "Terminal mode");
                     }
-                    ui.checkbox(&mut self.terminal_mode, "Terminal mode");
+                    
                     if self.terminal_mode {
                         ui.label("You can use marcide to excecute terminal commands");
                     }
@@ -765,17 +772,16 @@ impl eframe::App for TemplateApp {
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
                                 let terminalm = self.terminal_mode.clone();
-                                let code = self.code_editor.code.clone().trim().to_string();
                                 std::thread::spawn(move || {
-                                    let mut out: String = String::new();
+                                    let mut _out: String = String::new();
                                     if !terminalm {
-                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
                                     }
                                     else {
-                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
                                     }
 
-                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    s.send(_out.clone()).expect("Couldnt send msg");
                                 });
                             }
                         } else {
@@ -783,18 +789,17 @@ impl eframe::App for TemplateApp {
                             self.output_window_is_open = true;
                                 let lang = self.language.clone();
                                 let terminalm = self.terminal_mode.clone();
-                                let code = self.code_editor.code.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let mut out: String = String::new();
+                                    let mut _out: String = String::new();
                                     if !terminalm {
-                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
                                     }
                                     else {
-                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                        _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout,).to_string();
                                     }
 
-                                    s.send(out.clone()).expect("Couldnt send msg");
+                                    s.send(_out.clone()).expect("Couldnt send msg");
                                 });
                         }
                     } else {

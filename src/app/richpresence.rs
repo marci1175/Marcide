@@ -3,7 +3,7 @@ mod dependencies;
 use dependencies::{self as es, anyhow, ds, tokio, tracing};
 
 #[tokio::main]
-pub async fn rpc(projname: String, projstart: String) -> Result<(), anyhow::Error> {
+pub async fn rpc(projstart: String) -> Result<(), anyhow::Error> {
     let client = es::make_client(ds::Subscriptions::ACTIVITY).await;
 
     let mut activity_events = client.wheel.activity();
