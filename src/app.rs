@@ -2,6 +2,7 @@ use self::code_editor::CodeEditor;
 use dirs::home_dir;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
+use syntect::highlighting::Color;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
@@ -25,8 +26,6 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
-    //thread communication
-    //code
     #[serde(skip)]
     recv: mpsc::Receiver<String>,
     #[serde(skip)]
@@ -69,6 +68,8 @@ pub struct TemplateApp {
 
     language: String,
 
+    terminal_mode: bool,
+
     code_editor: CodeEditor,
 
     #[serde(skip)]
@@ -91,6 +92,8 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     lines: Vec<String>,
+
+    is_gui_development: bool,
 
     #[serde(skip)]
     finder_is_open: bool,
@@ -126,10 +129,12 @@ impl Default for TemplateApp {
             session_started: chrono::Local::now(),
             settings_window_is_open: false,
             auto_save: true,
+            terminal_mode : false,
             auto_save_to_ram: false,
             text: String::new(),
             language: "py".into(),
             code_editor: CodeEditor::default(),
+            is_gui_development: false,
             last_save_path: None,
             auto_save_interval: 15,
             autosave_sender: None,
@@ -153,6 +158,27 @@ impl TemplateApp {
         }
 
         Default::default()
+    }
+}
+fn terminalmode(code : String) -> std::process::Output {
+    let command_to_be_excecuted = format!("{}", code);
+    let cmdcomm = std::process::Command::new("cmd")
+        .arg("/C")
+        .arg(command_to_be_excecuted)
+        .output();
+    match cmdcomm {
+        Ok(mut ok) => {
+            if ok.stdout.len() == 0 {
+                ok.stdout = ok.stderr.clone();
+            };
+            ok
+        }
+        Err(_) => {
+            unsafe {
+                MessageBoxW(0,  w!("Troubleshoot : Did you add python / lua to system variables?\n(as py | as lua)"), w!("Fatal error"), MB_ICONERROR | MB_OK)
+            };
+            cmdcomm.unwrap()
+        }
     }
 }
 fn newcmd() {
@@ -335,12 +361,15 @@ impl eframe::App for TemplateApp {
     }
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if self.code_editor_text_lenght > self.code_editor.code.len(){
+            self.code_editor_text_lenght = self.code_editor.code.len();
+        }
         let mut go_to_offset: bool = false;
         match self.recv.try_recv() {
             Ok(ok) => {
-                self.output = ok;
+                self.output = ok.clone();
             }
-            Err(e) => { /*Task didnt finsih yet*/ }
+            Err(_) => { /*Task didnt finsih yet*/ }
         };
         let _projname: String = self.opened_file.clone();
         let starttime: String = self.session_started.format("%m-%d %H:%M:%S").to_string();
@@ -435,7 +464,7 @@ impl eframe::App for TemplateApp {
         }
         if ctrlis_pressed && ris_pressed && has_focus {
             if !self.output_window_is_open {
-                if self.unsafe_mode || self.language == "py" || self.language == "lua" {
+                if self. terminal_mode || self.unsafe_mode || self.language == "py" || self.language == "lua" {
                     //save to temp folder
                     if self.last_save_path.is_none() {
                         mkdir();
@@ -449,13 +478,19 @@ impl eframe::App for TemplateApp {
                             //save file
                             savetofile(files.clone(), self.text.clone());
                             //run file
+                            let terminalm = self.terminal_mode.clone();
+                            let code = self.code_editor.code.clone();
                             self.output_window_is_open = true;
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    ).to_string();
+                                    let mut out: String = String::new();
+                                    if !terminalm {
+                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                    }
+                                    else {
+                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                    }
 
                                     s.send(out.clone()).expect("Couldnt send msg");
                                 });
@@ -463,12 +498,18 @@ impl eframe::App for TemplateApp {
                     } else {
                         let files = self.last_save_path.clone();
                         self.output_window_is_open = true;
+                        let terminalm = self.terminal_mode.clone();
+                            let code = self.code_editor.code.clone();
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    ).to_string();
+                                    let mut out: String = String::new();
+                                    if !terminalm {
+                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                    }
+                                    else {
+                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                    }
 
                                     s.send(out.clone()).expect("Couldnt send msg");
                                 });
@@ -514,7 +555,7 @@ impl eframe::App for TemplateApp {
         }
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
-        if self.output_window_is_open {
+        if self.output_window_is_open && !self.is_gui_development {
             egui::Window::new("Output")
                 .open(&mut self.output_window_is_open)
                 .show(ctx, |ui| {
@@ -586,8 +627,8 @@ impl eframe::App for TemplateApp {
 
             let tx = self.autosave_sender.get_or_insert_with(|| {
                 let (tx, rx) = mpsc::channel::<String>();
+                
                 std::thread::spawn(move || loop {
-                    //reciver, text always gets updated
                     match rx.try_recv() {
                         Ok(text) => {  
                             //println!("{}", lines[1]);
@@ -597,7 +638,7 @@ impl eframe::App for TemplateApp {
 
                         }
                         Err(_) => {
-                            //code editor didnt recive new input, shit on it
+                            //"SzeRinTetEk tuDja A hArmAdiK szAbÁLyT?"
                         }
                     };
                 });
@@ -661,11 +702,25 @@ impl eframe::App for TemplateApp {
                         ui.label("Had so much fun developing this lol.");
                         ui.hyperlink_to("Github", "https://github.com/marci1175");
                     }
+                    if self.language == "py" || self.language == "lua" {
+                        ui.checkbox(&mut self.is_gui_development, "Gui mode");
+                        if self.is_gui_development {
+                            ui.label(RichText::from("Output window wont show up when running the application, with gui mode.").color(Color32::LIGHT_YELLOW));
+                            self.output_window_is_open = false;
+                        }
+                    }
+                    else {
+                        self.is_gui_development = false;
+                    }
                     ui.checkbox(&mut self.unsafe_mode, "Unsafe mode");
                     if self.unsafe_mode {
                         ui.label(
-                            "With unsafe mode on you can try running any programming language",
+                            "With unsafe mode on you can try running any programming language added to PATH",
                         );
+                    }
+                    ui.checkbox(&mut self.terminal_mode, "Terminal mode");
+                    if self.terminal_mode {
+                        ui.label("You can use marcide to excecute terminal commands");
                     }
                 });
         }
@@ -692,7 +747,7 @@ impl eframe::App for TemplateApp {
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
                 if run.clicked() {
-                    if self.unsafe_mode || self.language == "py" || self.language == "lua" {
+                    if self.terminal_mode || self.unsafe_mode || self.language == "py" || self.language == "lua" {
                         //save to temp folder
                         if self.last_save_path.is_none() {
                             mkdir();
@@ -709,10 +764,16 @@ impl eframe::App for TemplateApp {
                                 self.output_window_is_open = true;
                                 let lang = self.language.clone();
                                 let s = self.sender.clone();
+                                let terminalm = self.terminal_mode.clone();
+                                let code = self.code_editor.code.clone().trim().to_string();
                                 std::thread::spawn(move || {
-                                    let out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    ).to_string();
+                                    let mut out: String = String::new();
+                                    if !terminalm {
+                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                    }
+                                    else {
+                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                    }
 
                                     s.send(out.clone()).expect("Couldnt send msg");
                                 });
@@ -721,11 +782,17 @@ impl eframe::App for TemplateApp {
                             let files = self.last_save_path.clone();
                             self.output_window_is_open = true;
                                 let lang = self.language.clone();
+                                let terminalm = self.terminal_mode.clone();
+                                let code = self.code_editor.code.clone();
                                 let s = self.sender.clone();
                                 std::thread::spawn(move || {
-                                    let out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    ).to_string();
+                                    let mut out: String = String::new();
+                                    if !terminalm {
+                                        out = String::from_utf8_lossy(&runfile(files.clone(), lang).stdout,).to_string();
+                                    }
+                                    else {
+                                        out = String::from_utf8_lossy(&terminalmode(code).stdout,).to_string();
+                                    }
 
                                     s.send(out.clone()).expect("Couldnt send msg");
                                 });
