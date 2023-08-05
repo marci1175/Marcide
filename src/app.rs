@@ -8,7 +8,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
-
+use std::sync::{Arc, Mutex};
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_F, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
@@ -25,10 +25,18 @@ mod richpresence;
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+    //thread communication
+    //code
     #[serde(skip)]
     recv: mpsc::Receiver<String>,
     #[serde(skip)]
     sender: mpsc::Sender<String>,
+    //save
+    #[serde(skip)]
+    path_to_save: Arc<Mutex<String>>,
+    #[serde(skip)]
+    text_to_save: Arc<Mutex<String>>,
+
     unsafe_mode: bool,
 
     #[serde(skip)]
@@ -106,6 +114,8 @@ impl Default for TemplateApp {
         Self {
             recv,
             sender,
+            path_to_save: Arc::new(Mutex::new(String::new())),
+            text_to_save: Arc::new(Mutex::new(String::new())),
             unsafe_mode: false,
             to_find: String::new(),
             terminal_help: false,
