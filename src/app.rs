@@ -238,11 +238,15 @@ fn rmdir() {
         Err(_) => {}
     }
 }
-fn runfile(path: Option<PathBuf>, language: String) -> std::process::Output {
+fn runfile(path: Option<PathBuf>, mut language: String) -> std::process::Output {
     //first check if the env variables are set
     let env = std::process::Command::new(language.clone()).output();
     match env {
-        Ok(_) => { /*Env variable found*/ }
+        Ok(_) => { /*Env variable found, run py in quiet mode*/
+        if language == "py"{
+            language = "py -q".to_owned()
+        }
+        }
         Err(_) => {
             //notify user
             println!("env varaible not found");
