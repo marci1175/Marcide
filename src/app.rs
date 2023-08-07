@@ -1,5 +1,6 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
+use eframe::Theme;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
 use std::fs::File;
@@ -11,7 +12,7 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, VK_CONTROL, VK_F, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
+    GetAsyncKeyState, VK_CONTROL, VK_F, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T, VK_F11
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, MB_ICONERROR, MB_ICONEXCLAMATION, MB_OK, MB_YESNOCANCEL,
@@ -108,6 +109,10 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     opened_file: String,
+
+
+    window_options_always_on_top: bool,
+
 }
 
 impl Default for TemplateApp {
@@ -146,6 +151,8 @@ impl Default for TemplateApp {
             is_found: None,
             occurences: 0,
             opened_file: String::new(),
+
+            window_options_always_on_top: false,
         }
     }
 }
@@ -426,6 +433,7 @@ impl eframe::App for TemplateApp {
         let has_focus = ctx.input(|i| i.focused);
         let ctrlimput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) };
         let mut ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
+        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000 ) != 0};
         //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
         let sinp = unsafe { GetAsyncKeyState(VK_S as i32) };
         let sis_pressed = (sinp as u16 & 0x8000) != 0;
@@ -433,6 +441,9 @@ impl eframe::App for TemplateApp {
         let fimput = unsafe { GetAsyncKeyState(VK_F as i32) };
         let fis_pressed = (fimput as u16 & 0x8000) != 0;
         //save hotkey
+        if f11input {
+            eframe::NativeOptions::default().fullscreen = !eframe::NativeOptions::default().fullscreen;
+        }
         if alt_is_pressed {
             ctrlis_pressed = false;
         }
@@ -669,6 +680,9 @@ impl eframe::App for TemplateApp {
             egui::Window::new("Settings")
                 .open(&mut self.settings_window_is_open)
                 .show(ctx, |ui| {
+                    ui.label(RichText::from("Window").size(20.0));
+                    ui.checkbox(&mut self.window_options_always_on_top, "Always on top");
+
                     ui.label(egui::RichText::from("File handling").size(20.0));
                     ui.checkbox(&mut self.auto_save, "Autosave to file");
                     if self.auto_save {
