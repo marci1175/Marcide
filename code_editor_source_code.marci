@@ -598,7 +598,6 @@ impl eframe::App for TemplateApp {
                             self.is_found = None;
                         } else {
                             go_to_offset = true;
-                            //let px = ui.fonts(|f| f.row_height(&egui::FontId { size: 10.0, family: egui::FontFamily::Monospace }));
                             occurence = occur.as_ref().unwrap()[0];
                             self.scroll_offset[1] = occurence as f32;
                             self.occurences = occur.unwrap().len();
@@ -651,7 +650,7 @@ impl eframe::App for TemplateApp {
                             savetofile(Some(PathBuf::from(lines[1].trim())), lines[0].to_string());
                         }
                         Err(_) => {
-                            //"SzeRinTetEk tuDja A hArmAdiK szAb√ÅLyT?"
+                            //"SzeRinTetEk tuDja A hArmAdiK szAb¡LyT?"
                         }
                     };
                 });
@@ -698,8 +697,8 @@ impl eframe::App for TemplateApp {
                     ui.text_edit_singleline(&mut self.language);
                     if self.language == "quran"
                         || self.language == "Quran"
-                        || self.language == "Kor√°n"
-                        || self.language == "kor√°n"
+                        || self.language == "Kor·n"
+                        || self.language == "kor·n"
                     {
                         ui.hyperlink_to("Quran", "https://mek.oszk.hu/06500/06534/06534.pdf");
                     }

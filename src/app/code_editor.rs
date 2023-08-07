@@ -322,7 +322,7 @@ impl CodeEditor {
             });
         //finder is on
         if go_to_offset {
-            scroll_res.state.offset[1] = scroll_offset.clone()[1] * 3.0;
+            scroll_res.state.offset[1] = scroll_offset.clone()[1] * row_height;
         }
         let eightinput = unsafe { GetAsyncKeyState(VK_8 as i32) };
         let eight_is_pressed = (eightinput as u16 & 0x8000) != 0;
