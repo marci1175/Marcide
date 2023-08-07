@@ -451,6 +451,7 @@ impl eframe::App for TemplateApp {
             } else {
                 let files = FileDialog::new()
                     .set_title("Save as")
+                    .add_filter("Programming language", &[self.language.as_str()])
                     .set_directory("/")
                     .save_file();
                 if files.clone().is_some() {
