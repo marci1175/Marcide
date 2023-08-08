@@ -1,7 +1,5 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
-use eframe::Frame;
-use eframe::Theme;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
 use std::fs::File;
@@ -10,10 +8,9 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, VK_CONTROL, VK_F, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T, VK_F11
+    GetAsyncKeyState, VK_CONTROL, VK_F, VK_F11, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, MB_ICONERROR, MB_ICONEXCLAMATION, MB_OK, MB_YESNOCANCEL,
@@ -106,10 +103,8 @@ pub struct TemplateApp {
     #[serde(skip)]
     opened_file: String,
 
-
     window_options_always_on_top: bool,
     window_options_full_screen: bool,
-
 }
 
 impl Default for TemplateApp {
@@ -238,10 +233,11 @@ fn runfile(path: Option<PathBuf>, mut language: String) -> std::process::Output 
     //first check if the env variables are set
     let env = std::process::Command::new(language.clone()).output();
     match env {
-        Ok(_) => { /*Env variable found, run py in quiet mode*/
-        if language == "py"{
-            language = "py -q".to_owned()
-        }
+        Ok(_) => {
+            /*Env variable found, run py in quiet mode*/
+            if language == "py" {
+                language = "py -q".to_owned()
+            }
         }
         Err(_) => {
             //notify user
@@ -442,7 +438,7 @@ impl eframe::App for TemplateApp {
         let has_focus = ctx.input(|i| i.focused);
         let ctrlimput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) };
         let mut ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
-        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000 ) != 0};
+        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000) != 0 };
         //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
         let sinp = unsafe { GetAsyncKeyState(VK_S as i32) };
         let sis_pressed = (sinp as u16 & 0x8000) != 0;
@@ -693,8 +689,6 @@ impl eframe::App for TemplateApp {
                 .show(ctx, |ui| {
                     ui.label(RichText::from("Window").size(20.0));
                     ui.checkbox(&mut self.window_options_always_on_top, "Always on top");
-                    
-                    
                     ui.label(egui::RichText::from("File handling").size(20.0));
                     ui.checkbox(&mut self.auto_save, "Autosave to file");
                     if self.auto_save {
