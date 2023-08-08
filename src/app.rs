@@ -1,5 +1,6 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
+use eframe::Frame;
 use eframe::Theme;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
@@ -107,6 +108,7 @@ pub struct TemplateApp {
 
 
     window_options_always_on_top: bool,
+    window_options_full_screen: bool,
 
 }
 
@@ -146,6 +148,7 @@ impl Default for TemplateApp {
             opened_file: String::new(),
 
             window_options_always_on_top: false,
+            window_options_full_screen: false,
         }
     }
 }
@@ -313,6 +316,10 @@ impl eframe::App for TemplateApp {
     fn on_close_event(&mut self) -> bool {
         //remove temp dir
         rmdir();
+        let window_on_top_state = self.window_options_always_on_top;
+        if window_on_top_state {
+            self.window_options_always_on_top = false;
+        }
         if !self.auto_save || self.last_save_path.is_none() {
             //implement save warnings using winapi
             unsafe {
@@ -344,6 +351,9 @@ impl eframe::App for TemplateApp {
                     }
                     //cancel
                     2 => {
+                        if window_on_top_state {
+                            self.window_options_always_on_top = true;
+                        }
                         return false;
                     }
                     _ => {}
@@ -414,8 +424,10 @@ impl eframe::App for TemplateApp {
                 self.window_title = self.window_title.clone() + &"*".as_str();
             }
         }
-
+        //frame settings
         _frame.set_window_title(self.window_title.as_str());
+        _frame.set_fullscreen(self.window_options_full_screen);
+        _frame.set_always_on_top(self.window_options_always_on_top);
         //get alt input => if true ctrl => false
         let altimput = unsafe { GetAsyncKeyState(VK_RMENU as i32) };
         let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
@@ -439,7 +451,7 @@ impl eframe::App for TemplateApp {
         let fis_pressed = (fimput as u16 & 0x8000) != 0;
         //save hotkey
         if f11input {
-            eframe::NativeOptions::default().fullscreen = !eframe::NativeOptions::default().fullscreen;
+            self.window_options_full_screen = !self.window_options_full_screen;
         }
         if alt_is_pressed {
             ctrlis_pressed = false;
@@ -681,7 +693,8 @@ impl eframe::App for TemplateApp {
                 .show(ctx, |ui| {
                     ui.label(RichText::from("Window").size(20.0));
                     ui.checkbox(&mut self.window_options_always_on_top, "Always on top");
-
+                    
+                    
                     ui.label(egui::RichText::from("File handling").size(20.0));
                     ui.checkbox(&mut self.auto_save, "Autosave to file");
                     if self.auto_save {
