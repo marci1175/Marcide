@@ -25,6 +25,10 @@ use cmdmod::{
 #[serde(default)]
 pub struct TemplateApp {
     #[serde(skip)]
+    can_save_as : bool,
+    #[serde(skip)]
+    can_open : bool,
+    #[serde(skip)]
     can_save : bool,
     #[serde(skip)]
     can_run : bool,
@@ -115,6 +119,8 @@ impl Default for TemplateApp {
     fn default() -> Self {
         let (sender, recv) = mpsc::channel::<String>();
         Self {
+            can_open: false,
+            can_save_as: false,
             can_save: false,
             can_run: false,
             recv,
@@ -329,15 +335,7 @@ impl eframe::App for TemplateApp {
             }
         }
         if ctrlis_pressed && ois_pressed && has_focus {
-            let files = FileDialog::new()
-                .set_title("Open")
-                .set_directory("/")
-                .pick_file();
-            if files.clone().is_some() {
-                self.last_save_path = files.clone();
-                self.code_editor.code = openfile(files);
-                self.code_editor_text_lenght = self.code_editor.code.len();
-            }
+            self.can_open = !self.can_open;
         }
         if ctrlis_pressed && tis_pressed && has_focus {
             if !self.settings_window_is_open {
@@ -345,15 +343,7 @@ impl eframe::App for TemplateApp {
             }
         }
         if ctrlis_pressed && nis_pressed && has_focus {
-            let files = FileDialog::new()
-                .set_title("Save as")
-                .set_directory("/")
-                .save_file();
-            if files.clone().is_some() {
-                self.last_save_path = files.clone();
-                savetofile(files.clone(), self.text.clone());
-                self.code_editor_text_lenght = self.code_editor.code.len();
-            }
+            self.can_save_as = !self.can_save_as;
         }
         self.text = self.code_editor.code.clone();
         self.code_editor.language = self.language.clone();
@@ -633,7 +623,8 @@ impl eframe::App for TemplateApp {
                         }
                     }
                 }
-                if open.clicked() {
+                if open.clicked() || self.can_open {
+                    self.can_open = false;
                     let files = FileDialog::new()
                         .set_title("Open")
                         .set_directory("/")
@@ -644,7 +635,8 @@ impl eframe::App for TemplateApp {
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                 }
-                if save_as.clicked() {
+                if save_as.clicked() || self.can_save_as {
+                    self.can_save_as = false;
                     let files = FileDialog::new()
                         .set_title("Save as")
                         .set_directory("/")
