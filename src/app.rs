@@ -25,6 +25,10 @@ use cmdmod::{
 #[serde(default)]
 pub struct TemplateApp {
     #[serde(skip)]
+    can_save : bool,
+    #[serde(skip)]
+    can_run : bool,
+    #[serde(skip)]
     recv: mpsc::Receiver<String>,
     #[serde(skip)]
     sender: mpsc::Sender<String>,
@@ -111,6 +115,8 @@ impl Default for TemplateApp {
     fn default() -> Self {
         let (sender, recv) = mpsc::channel::<String>();
         Self {
+            can_save: false,
+            can_run: false,
             recv,
             sender,
             unsafe_mode: false,
@@ -304,21 +310,7 @@ impl eframe::App for TemplateApp {
             ctrlis_pressed = false;
         }
         if sis_pressed && ctrlis_pressed && has_focus {
-            if self.last_save_path.is_some() {
-                savetofile(self.last_save_path.clone(), self.text.clone());
-                self.code_editor_text_lenght = self.code_editor.code.len();
-            } else {
-                let files = FileDialog::new()
-                    .set_title("Save as")
-                    .add_filter("Programming language", &[self.language.as_str()])
-                    .set_directory("/")
-                    .save_file();
-                if files.clone().is_some() {
-                    self.last_save_path = files.clone();
-                    savetofile(self.last_save_path.clone(), self.text.clone());
-                    self.code_editor_text_lenght = self.code_editor.code.len();
-                }
-            }
+            self.can_save = !self.can_save;
         }
         //finder hotkey
         if ctrlis_pressed && fis_pressed && has_focus {
@@ -328,69 +320,7 @@ impl eframe::App for TemplateApp {
         }
         if ctrlis_pressed && ris_pressed && has_focus {
             if !self.output_window_is_open {
-                if self.terminal_mode
-                    || self.unsafe_mode
-                    || self.language == "py"
-                    || self.language == "lua"
-                {
-                    //save to temp folder
-                    if self.last_save_path.is_none() {
-                        mkdir();
-                        //C:\Users\%user_name%\marcide.temp
-                        if let Some(mut home_dir) = home_dir() {
-                            let to_push = format!("%marcide.temp%\\temp.{}", self.language);
-                            home_dir.push(to_push);
-
-                            // Set the files variable
-                            let files: Option<PathBuf> = Some(home_dir);
-                            //save file
-                            savetofile(files.clone(), self.text.clone());
-                            //run file
-                            let terminalm = self.terminal_mode.clone();
-                            self.output_window_is_open = true;
-                            let lang = self.language.clone();
-                            let s = self.sender.clone();
-                            std::thread::spawn(move || {
-                                let mut _out: String = String::new();
-                                if !terminalm {
-                                    _out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    )
-                                    .to_string();
-                                } else {
-                                    _out =
-                                        String::from_utf8_lossy(&terminalr(files.clone()).stdout)
-                                            .to_string();
-                                }
-
-                                s.send(_out.clone()).expect("Couldnt send msg");
-                            });
-                        }
-                    } else {
-                        let files = self.last_save_path.clone();
-                        self.output_window_is_open = true;
-                        let terminalm = self.terminal_mode.clone();
-                        let lang = self.language.clone();
-                        let s = self.sender.clone();
-                        std::thread::spawn(move || {
-                            let mut _out: String = String::new();
-                            if !terminalm {
-                                _out =
-                                    String::from_utf8_lossy(&runfile(files.clone(), lang).stdout)
-                                        .to_string();
-                            } else {
-                                _out = String::from_utf8_lossy(&terminalr(files.clone()).stdout)
-                                    .to_string();
-                            }
-
-                            s.send(_out.clone()).expect("Couldnt send msg");
-                        });
-                    }
-                } else {
-                    unsafe {
-                        MessageBoxW(0,  w!("This ide can only run .lua, and .py files safely\nIf you want to run something with a different extension, turn on unsafe mode"), w!("Fatal error"), MB_ICONEXCLAMATION | MB_OK);
-                    }
-                }
+                self.can_run = !self.can_run
             }
         }
         if ctrlis_pressed && fis_pressed && has_focus {
@@ -628,12 +558,14 @@ impl eframe::App for TemplateApp {
                 let terminal = ui.button("Terminal");
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
-                if run.clicked() {
+                if run.clicked()  || self.can_run {
                     if self.terminal_mode
                         || self.unsafe_mode
                         || self.language == "py"
                         || self.language == "lua"
                     {
+                        //reset value
+                        self.can_run = false;
                         //save to temp folder
                         if self.last_save_path.is_none() {
                             mkdir();
@@ -723,7 +655,9 @@ impl eframe::App for TemplateApp {
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                 };
-                if save.clicked() {
+                if save.clicked() || self.can_save {
+                    //reset value
+                    self.can_save = false;
                     if self.last_save_path.clone().is_none() {
                         let files = FileDialog::new()
                             .set_title("Save as")
