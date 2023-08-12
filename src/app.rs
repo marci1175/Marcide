@@ -686,7 +686,7 @@ impl eframe::App for TemplateApp {
                     self.spotify_window_is_open = true;
                 }
                 */
-                run.on_hover_text("You can run py and lua files\nCTRL + R");
+                run.on_hover_text("CTRL + R");
                 open.on_hover_text("CTRL + O");
                 save_as.on_hover_text("CTRL + N");
                 save.on_hover_text("CTRL + S");
