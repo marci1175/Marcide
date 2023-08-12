@@ -242,7 +242,7 @@ impl eframe::App for TemplateApp {
                         };
                     }
                     Err(_) => {
-                        //code editor didnt recive new input, shit on it
+                        
                     }
                 };
             });
