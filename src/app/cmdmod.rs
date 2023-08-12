@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use windows_sys::w;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+
 pub fn terminalr(path: Option<PathBuf>) -> std::process::Output {
     let command_to_be_excecuted = format!("{}", path.unwrap().display());
     let cmdcomm = std::process::Command::new("cmd")

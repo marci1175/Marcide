@@ -210,14 +210,13 @@ impl eframe::App for TemplateApp {
         }
         true
     }
-    /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         if !self.auto_save_to_ram {
             self.code_editor.code.clear();
         }
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
+    // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.code_editor_text_lenght > self.code_editor.code.len() {
             self.code_editor_text_lenght = self.code_editor.code.len();
