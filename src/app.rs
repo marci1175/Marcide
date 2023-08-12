@@ -681,11 +681,6 @@ impl eframe::App for TemplateApp {
                         Err(_) => {}
                     };
                 }
-                /*
-                if ui.button("Spotify").clicked(){
-                    self.spotify_window_is_open = true;
-                }
-                */
                 run.on_hover_text("CTRL + R");
                 open.on_hover_text("CTRL + O");
                 save_as.on_hover_text("CTRL + N");

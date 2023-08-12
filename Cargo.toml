@@ -1,6 +1,6 @@
 [package]
 name = "marcide"
-version = "0.1.4"
+version = "2.2.3"
 authors = ["Varga Marcell <marci1175>"]
 edition = "2021"
 rust-version = "1.65"
