@@ -117,6 +117,7 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     read_from_args: bool,
+    first_run : bool,
 }
 
 impl Default for TemplateApp {
@@ -162,6 +163,7 @@ impl Default for TemplateApp {
             window_options_full_screen: false,
 
             read_from_args: true,
+            first_run : true,
         }
     }
 }
@@ -236,6 +238,24 @@ impl eframe::App for TemplateApp {
     }
     // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        //add to registry
+        if self.first_run {
+            if let Ok(exe_path) = env::current_exe() {
+                let app_path = exe_path;
+                let command_output = std::process::Command::new("reg")
+                    .args(&[
+                        "add",
+                        "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide\\command",
+                        "/ve",
+                        "/d",
+                        &format!("\"{}\" \"%1\"", app_path.display()),
+                        "/f",
+                    ])
+                    .output()
+                    .expect("Failed to execute command");
+            }
+            self.first_run = false;            
+        }
         let args: Vec<String> = env::args().collect();
         //[0]self
         //path
