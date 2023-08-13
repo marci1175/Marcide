@@ -3,6 +3,7 @@ use dirs::home_dir;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
 use std::io;
+use std::env;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use windows_sys::w;
@@ -113,6 +114,9 @@ pub struct TemplateApp {
 
     window_options_always_on_top: bool,
     window_options_full_screen: bool,
+
+    #[serde(skip)]
+    read_from_args: bool,
 }
 
 impl Default for TemplateApp {
@@ -156,6 +160,8 @@ impl Default for TemplateApp {
 
             window_options_always_on_top: false,
             window_options_full_screen: false,
+
+            read_from_args: true,
         }
     }
 }
@@ -230,6 +236,26 @@ impl eframe::App for TemplateApp {
     }
     // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let args: Vec<String> = env::args().collect();
+        //[0]self
+        //path
+        if args.len() == 2 && self.read_from_args {
+            self.read_from_args = false;
+            match std::fs::metadata(args[1].clone()){
+                Ok(m) => {
+                    if m.is_file() && !m.is_dir(){
+                        self.last_save_path = Some(args[1].clone().into());
+                        self.code_editor.code = openfile(self.last_save_path.clone());
+                        self.code_editor_text_lenght = self.code_editor.code.len();
+                    }
+                },
+                Err(_) => {
+                    println!("File doesnt exist");
+                }
+            }
+           
+        }
+
         if self.code_editor_text_lenght > self.code_editor.code.len() {
             self.code_editor_text_lenght = self.code_editor.code.len();
         }
@@ -631,7 +657,7 @@ impl eframe::App for TemplateApp {
                         .pick_file();
                     if files.clone().is_some() {
                         self.last_save_path = files.clone();
-                        self.code_editor.code = openfile(files);
+                        self.code_editor.code = openfile(self.last_save_path.clone());
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     }
                 }
