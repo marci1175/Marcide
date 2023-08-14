@@ -49,6 +49,7 @@ tracing-subscriber = "0.3"
 embed-resource = "2.2.0"
 simulate = "0.3.0"
 winres = "0.1.12"
+winreg = "0.50.0"
 
 
 [build-dependencies]
