@@ -1,1 +1,0 @@
-rcedit --set-icon icon.ico target/release/marcide.exe

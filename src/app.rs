@@ -238,24 +238,7 @@ impl eframe::App for TemplateApp {
     }
     // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        //add to registry
-        if self.first_run {
-            if let Ok(exe_path) = env::current_exe() {
-                let app_path = exe_path;
-                let command_output = std::process::Command::new("reg")
-                    .args(&[
-                        "add",
-                        "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide\\command",
-                        "/ve",
-                        "/d",
-                        &format!("\"{}\" \"%1\"", app_path.display()),
-                        "/f",
-                    ])
-                    .output()
-                    .expect("Failed to execute command");
-            }
-            self.first_run = false;            
-        }
+        const ICON_BYTES: &[u8] = include_bytes!("../icon.ico");
         let args: Vec<String> = env::args().collect();
         //[0]self
         //path
@@ -504,6 +487,49 @@ impl eframe::App for TemplateApp {
             egui::Window::new("Settings")
                 .open(&mut self.settings_window_is_open)
                 .show(ctx, |ui| {
+                    ui.label(RichText::from("Application").size(20.0));
+                    if ui.button("Add to windows context menu").clicked() {
+                        if let Ok(exe_path) = env::current_exe() {
+                            let app_path = exe_path;
+                            let command_output = std::process::Command::new("reg")
+                                .args(&[
+                                    "add",
+                                    "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide\\command",
+                                    "/ve",
+                                    "/d",
+                                    &format!("\"{}\" \"%1\"", app_path.display()),
+                                    "/f",
+                                ])
+                                .output()
+                                .expect("Failed to execute command");
+                        }
+                    };
+                    if ui.button("Remove from windows context menu").clicked() {
+                        if let Ok(exe_path) = env::current_exe() {
+                            let app_path = exe_path;
+                            let icon_path = "";
+                            let delete_command_output = std::process::Command::new("reg")
+                                .args(&[
+                                    "delete",
+                                    "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
+                                    "/f",
+                                ])
+                                .output()
+                                .expect("Failed to execute command");
+                            let icon_command_output = std::process::Command::new("reg")
+                                .args(&[
+                                    "add",
+                                    "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
+                                    "icon",
+                                    "/ve",
+                                    "/d",
+                                    &format!("\"{}\"", icon_path),
+                                    "/f",
+                                ])
+                                .output()
+                                .expect("Failed to execute command");
+                        }
+                    };
                     ui.label(RichText::from("Window").size(20.0));
                     ui.checkbox(&mut self.window_options_always_on_top, "Always on top");
                     ui.label(egui::RichText::from("File handling").size(20.0));

@@ -1,4 +1,5 @@
 [package]
+build = "build.rs"
 name = "marcide"
 version = "2.2.3"
 authors = ["Varga Marcell <marci1175>"]
@@ -6,6 +7,8 @@ edition = "2021"
 rust-version = "1.65"
 rfd = "0.11.4"
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
 
 [dependencies]
 egui = "0.22.0"
@@ -45,6 +48,7 @@ anyhow = "1.0.72"
 tracing-subscriber = "0.3"
 embed-resource = "2.2.0"
 simulate = "0.3.0"
+winres = "0.1.12"
 
 
 [build-dependencies]
@@ -80,3 +84,6 @@ opt-level = 2
 [patch.crates-io]
 
 
+[package.metadata.winres]
+LegalCopyright = "Copyright © 2023"
+ProductVersion = "2.2.3"
