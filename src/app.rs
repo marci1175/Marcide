@@ -4,6 +4,7 @@ use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
 use std::io;
 use std::env;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use windows_sys::w;
@@ -507,7 +508,7 @@ impl eframe::App for TemplateApp {
                     if ui.button("Remove from windows context menu").clicked() {
                         if let Ok(exe_path) = env::current_exe() {
                             let app_path = exe_path;
-                            let icon_path = "";
+                            
                             let delete_command_output = std::process::Command::new("reg")
                                 .args(&[
                                     "delete",
@@ -516,6 +517,9 @@ impl eframe::App for TemplateApp {
                                 ])
                                 .output()
                                 .expect("Failed to execute command");
+                            let mut output_file = std::fs::File::create("C:\\Users\\Marci\\AppData\\Roaming\\Marcide\\data\\icon.ico").expect("Failed to create file");
+                            io::Write::write_all(&mut output_file, ICON_BYTES).expect("Failed to write to file");
+                            let icon_path = format!("C:\\Users\\{}\\AppData\\Roaming\\Marcide\\data\\icon.ico", env::var("USERNAME").unwrap());
                             let icon_command_output = std::process::Command::new("reg")
                                 .args(&[
                                     "add",
