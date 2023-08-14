@@ -1,5 +1,6 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
+use egui::Layout;
 use egui::{Color32, RichText, TextBuffer, Vec2};
 use rfd::FileDialog;
 use std::io;
@@ -179,6 +180,14 @@ impl TemplateApp {
 }
 fn count_lines(text: &str) -> usize {
     text.split('\n').count()
+}
+fn trueorfalse(arg : String) -> bool {
+    if arg.to_lowercase() == "false" {
+        return false;
+    }
+    else {
+        return true;
+    }
 }
 impl eframe::App for TemplateApp {
     fn on_close_event(&mut self) -> bool {
@@ -530,8 +539,10 @@ impl eframe::App for TemplateApp {
                             .output()
                             .expect("Failed to execute command");
                     };
+                    ui.separator();
                     ui.label(RichText::from("Window").size(20.0));
                     ui.checkbox(&mut self.window_options_always_on_top, "Always on top");
+                    ui.separator();
                     ui.label(egui::RichText::from("File handling").size(20.0));
                     ui.checkbox(&mut self.auto_save, "Autosave to file");
                     if self.auto_save {
@@ -596,6 +607,39 @@ impl eframe::App for TemplateApp {
                     if self.terminal_mode {
                         ui.label("You can use marcide to excecute terminal commands");
                     }
+                    ui.separator();
+                    ui.label(RichText::from("Configuration").size(20.0));
+                    ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui|{
+                        if ui.button("Export").clicked() {
+                            let files = FileDialog::new()
+                            .set_title("Save as")
+                            .add_filter("Marcide config", &["marcfg"])
+                            .set_directory("/")
+                            .save_file();
+                            if files.clone().is_some() {
+                                let config = format!("{}\n{}\n{}\n{}\n{}\n{}\n{}",self.window_options_always_on_top, self.auto_save , self.auto_save_to_ram, self.language, self.is_gui_development, self.terminal_mode, self.unsafe_mode);
+                                savetofile(files.clone(), config);
+                            };
+                        }
+                        if ui.button("Import").clicked() {
+                            let files = FileDialog::new()
+                                .set_title("Save as")
+                                .add_filter("Marcide config", &["marcfg"])
+                                .set_directory("/")
+                                .pick_file();
+                            let contains = openfile(files);
+                            let lines : Vec<&str> = contains.lines().collect();
+                            //xd
+                            self.window_options_always_on_top = trueorfalse(lines[0].to_owned());
+                            self.auto_save = trueorfalse(lines[1].to_owned());
+                            self.auto_save_to_ram = trueorfalse(lines[2].to_owned());
+                            self.language = lines[3].to_owned();
+                            self.is_gui_development = trueorfalse(lines[4].to_owned());
+                            self.terminal_mode = trueorfalse(lines[5].to_owned());
+                            self.unsafe_mode = trueorfalse(lines[6].to_owned());
+
+                        };
+                    });
                 });
         }
         egui::TopBottomPanel::top("Settings").show(ctx, |ui| {
