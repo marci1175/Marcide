@@ -271,9 +271,10 @@ impl eframe::App for TemplateApp {
            
         }
 
-        if self.code_editor_text_lenght > self.code_editor.code.len() {
+        if self.code_editor_text_lenght > self.code_editor.code.len() || self.code_editor.code.len() == 0 {
             self.code_editor_text_lenght = self.code_editor.code.len();
         }
+
         let mut go_to_offset: bool = false;
         match self.recv.try_recv() {
             Ok(ok) => {
@@ -320,12 +321,16 @@ impl eframe::App for TemplateApp {
                     self.opened_file = file_name_str.clone().to_string();
                 }
             }
-            if self.code_editor_text_lenght != self.code_editor.code.len() {
-                self.window_title = self.window_title.clone() + &"*".as_str();
+            if self.code_editor.code.len() != self.code_editor_text_lenght {
+                let window_title = self.window_title.clone() + &"*".as_str();
+                _frame.set_window_title(window_title.as_str());
+            }
+            else {
+                _frame.set_window_title(self.window_title.as_str());
             }
         }
         //frame settings
-        _frame.set_window_title(self.window_title.as_str());
+        
         _frame.set_fullscreen(self.window_options_full_screen);
         _frame.set_always_on_top(self.window_options_always_on_top);
         //get alt input => if true ctrl => false
@@ -485,7 +490,7 @@ impl eframe::App for TemplateApp {
                         self.code_editor.code.clone(),
                         path.to_str().unwrap_or_default().to_string()
                     );
-                    if self.code_editor_text_lenght < self.code_editor.code.len() {
+                    if self.code_editor_text_lenght <= self.code_editor.code.len() {
                         match tx.send(data_to_send) {
                             Ok(_) => {}
                             Err(_) => {}
