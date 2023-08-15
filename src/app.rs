@@ -1,3 +1,4 @@
+
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 use egui::Layout;
@@ -734,6 +735,7 @@ impl eframe::App for TemplateApp {
                         //save to temp folder
                         if self.last_save_path.is_none() {
                             mkdir();
+                            
                             //C:\Users\%user_name%\marcide.temp
                             if let Some(mut home_dir) = home_dir() {
                                 let mut to_push: String = String::new();
