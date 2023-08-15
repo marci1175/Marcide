@@ -736,7 +736,17 @@ impl eframe::App for TemplateApp {
                             mkdir();
                             //C:\Users\%user_name%\marcide.temp
                             if let Some(mut home_dir) = home_dir() {
-                                let to_push = format!("%marcide.temp%\\temp.{}", self.language);
+                                let mut to_push: String = String::new();
+                                if !self.terminal_mode {
+                                    to_push = format!("%marcide.temp%\\temp.{}", self.language);
+                                }
+                                else if self.unsafe_mode {
+                                    to_push = format!("%marcide.temp%\\temp");
+                                }
+                                else {
+                                    to_push = format!("%marcide.temp%\\temp.bat");
+                                }
+                               
                                 home_dir.push(to_push);
 
                                 // Set the files variable
