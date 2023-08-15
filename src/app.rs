@@ -850,7 +850,7 @@ impl eframe::App for TemplateApp {
                         self.last_save_path = files.clone();
                         savetofile(self.last_save_path.clone(), self.text.clone());
                         self.code_editor_text_lenght = self.code_editor.code.len();
-                    } else if self.code_editor_text_lenght < self.code_editor.code.len() {
+                    } else if self.code_editor_text_lenght <= self.code_editor.code.len() {
                         savetofile(self.last_save_path.clone(), self.text.clone());
                         self.code_editor_text_lenght = self.code_editor.code.len();
                     } else {
