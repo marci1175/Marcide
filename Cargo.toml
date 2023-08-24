@@ -50,6 +50,8 @@ embed-resource = "2.2.0"
 simulate = "0.3.0"
 winres = "0.1.12"
 winreg = "0.50.0"
+egui-terminal = { version = "0.1.0", git = "https://github.com/quinntyx/egui-terminal", rev = "098c769" }
+termwiz = "0.20.0"
 
 
 [build-dependencies]

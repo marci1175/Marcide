@@ -28,12 +28,7 @@ pub fn terminalr(path: Option<PathBuf>) -> std::process::Output {
         }
     }
 }
-pub fn newcmd() {
-    let _ = std::process::Command::new("powershell")
-        .arg("-C")
-        .arg("start cmd.exe")
-        .spawn();
-}
+
 pub fn finder(text: String, to_find: String) -> io::Result<Vec<usize>> {
     //let reader = BufReader::new(file);
     let mut line_numbers: Vec<usize> = Vec::new();

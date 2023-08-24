@@ -1,8 +1,9 @@
-
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
-use egui::Layout;
+use egui::{Layout, Stroke, Rounding};
 use egui::{Color32, RichText, TextBuffer, Vec2};
+
+use egui_terminal::term::CommandBuilder;
 use rfd::FileDialog;
 use std::io;
 use std::env;
@@ -17,18 +18,31 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, MB_ICONERROR, MB_ICONEXCLAMATION, MB_OK, MB_YESNOCANCEL,
 };
+
+
+use eframe::egui;
+use egui_terminal::TermHandler;
+
 //mod gks;
+mod terminal;
 mod cmdmod;
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-// if we add new fields, give them default values when deserializing old state
 mod code_editor;
 mod richpresence;
+
 use cmdmod::{
-    finder, mkdir, newcmd, openfile, rmdir, runfile, savetofile, terminalr
+    finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr
 };
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct TemplateApp {
+    #[serde(skip)]
+    window_size: Vec2,
+    #[serde(skip)]
+    terminal_terminal_style: TermHandler,
+
+    #[serde(skip)]
+    run_terminal_style: TermHandler,
+
     #[serde(skip)]
     can_save_as : bool,
     #[serde(skip)]
@@ -128,6 +142,9 @@ impl Default for TemplateApp {
     fn default() -> Self {
         let (sender, recv) = mpsc::channel::<String>();
         Self {
+            window_size: Vec2 { x: 0., y: 0. },
+            terminal_terminal_style: TermHandler::new(CommandBuilder::new("powershell")),
+            run_terminal_style: TermHandler::new(CommandBuilder::new("powershell")),
             can_open: false,
             can_save_as: false,
             can_save: false,
@@ -192,6 +209,7 @@ fn trueorfalse(arg : String) -> bool {
         return true;
     }
 }
+
 impl eframe::App for TemplateApp {
     fn on_close_event(&mut self) -> bool {
         //remove temp dir
@@ -250,6 +268,7 @@ impl eframe::App for TemplateApp {
     }
     // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.window_size = _frame.info().window_info.size;
         const ICON_BYTES: &[u8] = include_bytes!("../icon.ico");
         let args: Vec<String> = env::args().collect();
         //[0]self
@@ -318,7 +337,7 @@ impl eframe::App for TemplateApp {
             if let Some(file_name) = wintitle.file_name() {
                 if let Some(file_name_str) = file_name.to_str() {
                     self.window_title = format!("Marcide - {}", file_name_str.to_string());
-                    self.opened_file = file_name_str.clone().to_string();
+                    self.opened_file = file_name_str.to_string();
                 }
             }
             if self.code_editor.code.len() != self.code_editor_text_lenght {
@@ -451,13 +470,41 @@ impl eframe::App for TemplateApp {
             });
         }
         */
+
+        
         if self.terminal_help {
-            egui::Window::new("Help")
-                .default_size((300.0, 300.0))
+            egui::Window::new("Terminal")
+                .fixed_size((self.window_size[0] / 1.5, self.window_size[1] / 2.0))
+                .resizable(false)
                 .open(&mut self.terminal_help)
                 .show(ctx, |ui| {
-                    ui.label("How to add a module to python?");
-                    ui.text_edit_singleline(&mut "py -m pip install {your_module_name}");
+
+                    ui.style_mut().visuals.window_fill = Color32::BLACK;
+                    
+                    let frame_rect = ui.max_rect().shrink(0.0);
+                    
+                        ui.allocate_space(egui::vec2(ui.available_width(), 5.));
+                        ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
+
+                        ui.painter().rect(
+                            frame_rect,
+                            Rounding::same(5.0),
+                            Color32::BLACK,
+                            Stroke::NONE,
+                        );
+                        let code_rect = frame_rect.shrink(5.0);
+    
+                        let mut frame_ui = ui.child_ui(code_rect, Layout::default());
+    
+                        egui::ScrollArea::vertical()
+                            .id_source("terminal")
+                            .stick_to_bottom(true)
+                            .show(&mut frame_ui, |ui| {
+                                ui.add(terminal::new(&mut self.terminal_terminal_style, ui.available_size()));
+                            });
+                    
+                    
+                    
                 });
         }
         //autosave implementation
@@ -864,7 +911,7 @@ impl eframe::App for TemplateApp {
                     self.settings_window_is_open = !self.settings_window_is_open;
                 }
                 if terminal.clicked() {
-                    newcmd();
+                    //newcmd();
                     self.terminal_help = !self.terminal_help;
                 }
                 if support.clicked() {
