@@ -481,7 +481,7 @@ impl eframe::App for TemplateApp {
 
                     ui.style_mut().visuals.window_fill = Color32::BLACK;
                     
-                    let frame_rect = ui.max_rect().shrink(0.0);
+                    let frame_rect = ui.max_rect().shrink(5.0);
                     
                         ui.allocate_space(egui::vec2(ui.available_width(), 5.));
                         ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
