@@ -1,6 +1,7 @@
 // ----------------------------------------------------------------------------
+use egui::{FontId, FontFamily};
 use egui::text::LayoutJob;
-use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
+use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2, Align};
 
 use serde::{Deserialize, Serialize};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
@@ -302,9 +303,11 @@ impl CodeEditor {
         let font_id = FontSelection::default().resolve(ui.style());
         let row_height = ui.fonts(|fonts| fonts.row_height(&font_id));
         let rows = ((code_rect.height() - 5.0) / row_height).floor() as usize;
+        //full retard
+        let code_ref = code.clone();
 
         let text_widget = egui::TextEdit::multiline(code)
-            .font(egui::TextStyle::Monospace) // for cursor height
+            .font(FontSelection::FontId(FontId::new(10.0, FontFamily::Monospace))) // for cursor height
             .code_editor()
             // remove the frame and draw our own
             .frame(false)
@@ -313,12 +316,27 @@ impl CodeEditor {
             .layouter(&mut layouter)
             .id(id)
             .desired_rows(rows);
+        
         let mut scroll_res = egui::ScrollArea::vertical()
             .id_source("code editor")
             .stick_to_bottom(true)
             .scroll_offset(scroll_offset)
             .show(&mut frame_ui, |ui| {
-                ui.add(text_widget);
+                ui.with_layout(Layout::left_to_right(Align::Min), |ui|{
+                    let mut numbers: String = String::new();
+                    for i in 1..=code_ref.clone().lines().count() {
+                        numbers.push_str(&i.to_string());
+                        numbers.push('\n');
+                    }
+                    
+                    ui.allocate_ui(vec2(25., row_height), |ui|{
+                        ui.add(egui::Label::new(egui::RichText::from(numbers.to_string()).font(FontId::new(12., FontFamily::Monospace))));
+                    });
+
+                    ui.add(text_widget);
+                });
+                
+                
             });
         //finder is on
         if go_to_offset {
