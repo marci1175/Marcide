@@ -332,7 +332,7 @@ impl CodeEditor {
                     ui.allocate_ui(vec2(25., row_height), |ui|{
                         ui.add(egui::Label::new(egui::RichText::from(numbers.to_string()).font(FontId::new(12., FontFamily::Monospace))));
                     });
-                    
+
                     ui.add(text_widget);
                 });
                 
