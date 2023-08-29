@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-use egui::{FontId, FontFamily};
+use egui::{FontId, FontFamily, Pos2, pos2, Rect};
 use egui::text::LayoutJob;
 use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2, Align};
 
@@ -276,9 +276,12 @@ impl CodeEditor {
             quote_is_held: _,
             sbracket_is_held: _,
         } = self;
+        let rect_size = ui.available_size();
+        let rect_pos = pos2(10., 20.);
+        let rect = Rect::from_min_size(rect_pos, rect_size);
 
-        let frame_rect = ui.max_rect().shrink(0.0);
-        let code_rect = frame_rect.shrink(5.0);
+        let frame_rect = ui.max_rect().shrink(5.0);
+        let code_rect = frame_rect.shrink(10.0);
 
         let theme = CodeTheme::from_memory(ui.ctx());
         let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
@@ -311,7 +314,7 @@ impl CodeEditor {
             .code_editor()
             // remove the frame and draw our own
             .frame(false)
-            .desired_width(f32::INFINITY)
+            .desired_width(ui.available_width())
             .margin(vec2(2.0, 2.0))
             .layouter(&mut layouter)
             .id(id)
@@ -332,8 +335,9 @@ impl CodeEditor {
                     ui.allocate_ui(vec2(25., row_height), |ui|{
                         ui.add(egui::Label::new(egui::RichText::from(numbers.to_string()).font(FontId::new(12., FontFamily::Monospace))));
                     });
-
+                    
                     ui.add(text_widget);
+                    
                 });
                 
                 

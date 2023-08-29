@@ -11,7 +11,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Marcide",
         native_options,
-        Box::new(|cc| Box::new(marcide::TemplateApp::new(cc))),
+        Box::new(|cc| Box::new(marcide::AppData::new(cc))),
     )
 }
 
