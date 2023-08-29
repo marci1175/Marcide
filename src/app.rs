@@ -338,54 +338,205 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     ///ctx = ctx _frame = _frame
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         //rest of the app
+        self.data.window_size = self.frame.info().window_info.size;
+        const ICON_BYTES: &[u8] = include_bytes!("../icon.ico");
+        let args: Vec<String> = env::args().collect();
+        //[0]self
+        //path
+        if args.len() == 2 && self.data.read_from_args {
+            self.data.read_from_args = false;
+            match std::fs::metadata(args[1].clone()){
+                Ok(m) => {
+                    if m.is_file() && !m.is_dir(){
+                        self.data.last_save_path = Some(args[1].clone().into());
+                        self.data.code_editor.code = openfile(self.data.last_save_path.clone());
+                        self.data.code_editor_text_lenght = self.data.code_editor.code.len();
+                    }
+                },
+                Err(_) => {
+                    println!("File doesnt exist");
+                }
+            }
+           
+        }
 
+        if self.data.code_editor_text_lenght > self.data.code_editor.code.len() || self.data.code_editor.code.len() == 0 {
+            self.data.code_editor_text_lenght = self.data.code_editor.code.len();
+        }
 
-        //tab 1 == code editor tab 2 == terminal
-        if *tab == 2 {
-            let frame_rect = dbg!(ui.max_rect());
-            egui::CentralPanel::default().show(self.ctx, |ui| {
-                ui.allocate_ui_at_rect(frame_rect, |ui|{
-                    ui.with_layout(
-                        egui::Layout::top_down_justified(egui::Align::Center),
-                        |ui| {
-                            self.data.scroll_offset = code_editor::CodeEditor::show(
-                                &mut self.data.code_editor,
-                                "id".into(),
-                                ui,
-                                self.data.scroll_offset,
-                                self.data.go_to_offset,
-                            );
-                        },
-                    );
-                });
-                
+        match self.data.recv.try_recv() {
+            Ok(ok) => {
+                self.data.output = ok.clone();
+            }
+            Err(_) => { /*Task didnt finsih yet*/ }
+        };
+        let _projname: String = self.data.opened_file.clone();
+        let starttime: String = self.data.session_started.format("%m-%d %H:%M:%S").to_string();
+        let tx = self.data.rpc_sender.get_or_insert_with(|| {
+            let (tx, rx) = mpsc::channel::<String>();
+            std::thread::spawn(move || loop {
+                //reciver, text always gets updated
+                match rx.try_recv() {
+                    Ok(_ /* Failed attempt to make a changing rcp based on filename */) => {
+                        match richpresence::rpc(starttime.clone()) {
+                            Err(err) => println!("Richpresence failed : {}", err),
+                            Ok(_) => {}
+                        };
+                    }
+                    Err(_) => {
+                        
+                    }
+                };
             });
-        }
-        if *tab == 1 {
-            ui.style_mut().visuals.window_fill = Color32::BLACK;
-                    
-            let frame_rect = ui.max_rect().shrink(5.0);
-                    
-            ui.allocate_space(egui::vec2(ui.available_width(), 5.));
-            ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
+            tx
+        });
+        match tx.send(self.data.opened_file.clone()) {
+            Ok(_) => {}
+            Err(err) => {
+                println!("Failed to send msg : {}", err)
+            }
+        };
 
-            ui.painter().rect(
-                frame_rect,
-                Rounding::same(5.0),
-                Color32::BLACK,
-                Stroke::NONE,
-            );
-            let code_rect = frame_rect.shrink(5.0);
-    
-            let mut frame_ui = ui.child_ui(code_rect, Layout::default());
-    
-            egui::ScrollArea::vertical()
-                .id_source("terminal")
-                .stick_to_bottom(true)
-                .show(&mut frame_ui, |ui| {
-                    ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
-                });
+        self.data.discord_presence_is_running = true;
+
+        //title logic for * when unsaved
+
+        //hotkeys
+        if let Some(wintitle) = self.data.last_save_path.clone() {
+            if let Some(file_name) = wintitle.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    self.data.window_title = format!("Marcide - {}", file_name_str.to_string());
+                    self.data.opened_file = file_name_str.to_string();
+                }
+            }
+            if self.data.code_editor.code.len() != self.data.code_editor_text_lenght {
+                let window_title = self.data.window_title.clone() + &"*".as_str();
+                self.frame.set_window_title(window_title.as_str());
+            }
+            else {
+                self.frame.set_window_title(self.data.window_title.as_str());
+            }
         }
+        //frame settings
+        
+        self.frame.set_fullscreen(self.data.window_options_full_screen);
+        self.frame.set_always_on_top(self.data.window_options_always_on_top);
+        //get alt input => if true ctrl => false
+        let altimput = unsafe { GetAsyncKeyState(VK_RMENU as i32) };
+        let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
+        let nimput = unsafe { GetAsyncKeyState(VK_N as i32) };
+        let nis_pressed = (nimput as u16 & 0x8000) != 0;
+        let oimput = unsafe { GetAsyncKeyState(VK_O as i32) };
+        let ois_pressed = (oimput as u16 & 0x8000) != 0;
+        let rimput = unsafe { GetAsyncKeyState(VK_R as i32) };
+        let ris_pressed = (rimput as u16 & 0x8000) != 0;
+        let timput = unsafe { GetAsyncKeyState(VK_T as i32) };
+        let tis_pressed = (timput as u16 & 0x8000) != 0;
+        let has_focus = self.ctx.input(|i| i.focused);
+        let ctrlimput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) };
+        let mut ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
+        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000) != 0 };
+        //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
+        let sinp = unsafe { GetAsyncKeyState(VK_S as i32) };
+        let sis_pressed = (sinp as u16 & 0x8000) != 0;
+        //if f is pressed
+        let fimput = unsafe { GetAsyncKeyState(VK_F as i32) };
+        let fis_pressed = (fimput as u16 & 0x8000) != 0;
+    
+        //save hotkey
+        if f11input {
+            self.data.window_options_full_screen = !self.data.window_options_full_screen;
+        }
+        if alt_is_pressed {
+            ctrlis_pressed = false;
+        }
+        if sis_pressed && ctrlis_pressed && has_focus {
+            self.data.can_save = !self.data.can_save;
+        }
+        //finder hotkey
+        if ctrlis_pressed && fis_pressed && has_focus {
+            if !self.data.finder_is_open {
+                self.data.finder_is_open = true;
+            }
+        }
+        if ctrlis_pressed && ris_pressed && has_focus {
+            if !self.data.output_window_is_open {
+                self.data.can_run = !self.data.can_run
+            }
+        }
+        if ctrlis_pressed && fis_pressed && has_focus {
+            if !self.data.finder_is_open {
+                self.data.finder_is_open = !self.data.finder_is_open;
+            }
+        }
+        if ctrlis_pressed && ois_pressed && has_focus {
+            self.data.can_open = !self.data.can_open;
+        }
+        if ctrlis_pressed && tis_pressed && has_focus {
+            if !self.data.settings_window_is_open {
+                self.data.settings_window_is_open = !self.data.settings_window_is_open;
+            }
+        }
+        if ctrlis_pressed && nis_pressed && has_focus {
+            self.data.can_save_as = !self.data.can_save_as;
+        }
+        
+        /*egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(self.ctx, |ui|{
+                    ui.label("text");
+                }); */
+            egui::CentralPanel::default().show_inside(ui, |ui|{
+                
+                if *tab == 2 {
+                    let frame_rect = dbg!(ui.max_rect());
+                    egui::CentralPanel::default().show(self.ctx, |ui| {
+                        ui.allocate_ui_at_rect(frame_rect, |ui|{
+                            ui.with_layout(
+                                egui::Layout::top_down_justified(egui::Align::Center),
+                                |ui| {
+                                    self.data.scroll_offset = code_editor::CodeEditor::show(
+                                        &mut self.data.code_editor,
+                                        "id".into(),
+                                        ui,
+                                        self.data.scroll_offset,
+                                        self.data.go_to_offset,
+                                    );
+                                },
+                            );
+                        });
+                        
+                    });
+                    
+                }
+                if *tab == 1 {
+                    ui.style_mut().visuals.window_fill = Color32::BLACK;
+                            
+                    let frame_rect = ui.max_rect().shrink(5.0);
+                            
+                    ui.allocate_space(egui::vec2(ui.available_width(), 5.));
+                    ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
+        
+                    ui.painter().rect(
+                        frame_rect,
+                        Rounding::same(5.0),
+                        Color32::BLACK,
+                        Stroke::NONE,
+                    );
+                    let code_rect = frame_rect.shrink(5.0);
+            
+                    let mut frame_ui = ui.child_ui(code_rect, Layout::default());
+            
+                    egui::ScrollArea::vertical()
+                        .id_source("terminal")
+                        .stick_to_bottom(true)
+                        .show(&mut frame_ui, |ui| {
+                            ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
+                        });
+                }
+            });
+        
+        //tab 1 == code editor tab 2 == terminal
+        
+        
     }
     
     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {

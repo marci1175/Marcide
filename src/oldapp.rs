@@ -472,15 +472,6 @@ impl eframe::App for TemplateApp {
                     }
                 });
         }
-        /*
-        if self.spotify_window_is_open{
-            egui::Window::new("Spotify")
-            .open(&mut self.spotify_window_is_open)
-            .show(ctx, |ui|{
-
-            });
-        }
-        */
 
         
         if self.terminal_help {
