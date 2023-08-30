@@ -276,6 +276,7 @@ impl CodeEditor {
             quote_is_held: _,
             sbracket_is_held: _,
         } = self;
+        
         let rect_size = ui.available_size();
         let rect_pos = pos2(10., 20.);
         let rect = Rect::from_min_size(rect_pos, rect_size);
@@ -290,16 +291,16 @@ impl CodeEditor {
             //ui.fonts().layout_job(layout_job)
             ui.fonts(|fonts| fonts.layout_job(layout_job))
         };
-
+        
         ui.allocate_space(ui.available_size());
-
+         
         ui.painter().rect(
             frame_rect,
             Rounding::same(5.0),
             Color32::BLACK,
             Stroke::NONE,
         );
-
+        
         let mut frame_ui = ui.child_ui(code_rect, Layout::default());
 
         // get how many rows it takes to fill up our max rect
@@ -346,6 +347,7 @@ impl CodeEditor {
         if go_to_offset {
             scroll_res.state.offset[1] = scroll_offset.clone()[1] * row_height;
         }
+        
         let eightinput = unsafe { GetAsyncKeyState(VK_8 as i32) };
         let eight_is_pressed = (eightinput as u16 & 0x8000) != 0;
         let twoinput = unsafe { GetAsyncKeyState(VK_2 as i32) };
@@ -445,7 +447,8 @@ impl CodeEditor {
                 };
             }
         }
-
+         
         scroll_res.state.offset
+        
     }
 }

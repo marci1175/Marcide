@@ -216,7 +216,7 @@ impl Default for AppData {
     fn default() -> Self {
         Self {
             app_data: TemplateApp::default(),
-            tree: Tree::new(vec![1, 2]),
+            tree: Tree::new(vec![1, 2, 3, 4, 5]),
         }
     }
 }
@@ -485,10 +485,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     ui.label("text");
                 }); */
             egui::CentralPanel::default().show_inside(ui, |ui|{
-                  dfg
+            
                 if *tab == 2 {
                     let frame_rect = dbg!(ui.max_rect());
-                    egui::CentralPanel::default().show(self.ctx, |ui| {
+                    
                         ui.allocate_ui_at_rect(frame_rect, |ui|{
                             ui.with_layout(
                                 egui::Layout::top_down_justified(egui::Align::Center),
@@ -504,7 +504,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                             );
                         });
                         
-                    });
+                    
                     
                 }
                 if *tab == 1 {
@@ -541,224 +541,23 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     
     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
         if *(tab) == 1 {
-            format!("Terminal").into()
+            return format!("Terminal").into()
         }
         else if *(tab) == 2 {
-            format!("Code editor").into()
+            return format!("Code editor").into()
+        }
+        else if *(tab) == 3 {
+            return format!("Find").into()
+        }
+        else if *(tab) == 4 {
+            return format!("Output").into()
+        }
+        else if *(tab) == 5 {
+            return format!("Settings").into()
         }
         else {
-            format!("Tab {tab}").into()
+            format!("Tab {}", tab).into()
         }
     }
 
 }
-/*
-    
-    // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-    
-        egui::TopBottomPanel::top("Settings").show(ctx, |ui| {
-            /*Brownie recipie
-                For 1 small baking dish 1 cup (2 sticks) butter 4 medium sized eggs 2 cups
-                brown sugar 3/4 cup cocoa powder (you can substitute 3.5 oz really dark chocolate) 1 cup flour 1/2 teaspoon vanilla extract
-                3/4 cup chopped almonds or other nuts
-
-                1. Melt the butter, let it cool a little
-                2. Beat eggs, sugar into butter
-                3. Mix in the rest of the ingredients
-                4. Put into baking dish
-                5. Bake ~30 minutes at 375 F
-            */
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                //define buttons
-                let run = ui.button("Run");
-                let find = ui.button("Find");
-                let save = ui.button("Save");
-                let save_as = ui.button("Save as");
-                let open = ui.button("Open");
-                let terminal = ui.button("Terminal");
-                let settings = ui.button("Settings");
-                let support = ui.button("Support");
-                if run.clicked()  || self.can_run {
-                    if self.terminal_mode
-                        || self.unsafe_mode
-                        || self.language == "py"
-                        || self.language == "lua"
-                    {
-                        //reset value
-                        self.can_run = false;
-                        //save to temp folder
-                        if self.last_save_path.is_none() {
-                            mkdir();
-                            
-                            //C:\Users\%user_name%\marcide.temp
-                            if let Some(mut home_dir) = home_dir() {
-                                let mut to_push: String = String::new();
-                                if !self.terminal_mode {
-                                    to_push = format!("%marcide.temp%\\temp.{}", self.language);
-                                }
-                                else if self.unsafe_mode {
-                                    to_push = format!("%marcide.temp%\\temp");
-                                }
-                                else {
-                                    to_push = format!("%marcide.temp%\\temp.bat");
-                                }
-                               
-                                home_dir.push(to_push);
-
-                                // Set the files variable
-                                let files: Option<PathBuf> = Some(home_dir);
-                                //save file
-                                savetofile(files.clone(), self.text.clone());
-                                //run file
-                                self.output_window_is_open = true;
-                                let lang = self.language.clone();
-                                let s = self.sender.clone();
-                                let terminalm = self.terminal_mode.clone();
-                                std::thread::spawn(move || {
-                                    let mut _out: String = String::new();
-                                    if !terminalm {
-                                        _out = String::from_utf8_lossy(
-                                            &runfile(files.clone(), lang).stdout,
-                                        )
-                                        .to_string();
-                                    } else {
-                                        _out = String::from_utf8_lossy(
-                                            &terminalr(files.clone()).stdout,
-                                        )
-                                        .to_string();
-                                    }
-
-                                    s.send(_out.clone()).expect("Couldnt send msg");
-                                });
-                            }
-                        } else {
-                            let files = self.last_save_path.clone();
-                            self.output_window_is_open = true;
-                            let lang = self.language.clone();
-                            let terminalm = self.terminal_mode.clone();
-                            let s = self.sender.clone();
-                            std::thread::spawn(move || {
-                                let mut _out: String = String::new();
-                                if !terminalm {
-                                    _out = String::from_utf8_lossy(
-                                        &runfile(files.clone(), lang).stdout,
-                                    )
-                                    .to_string();
-                                } else {
-                                    _out =
-                                        String::from_utf8_lossy(&terminalr(files.clone()).stdout)
-                                            .to_string();
-                                }
-
-                                s.send(_out.clone()).expect("Couldnt send msg");
-                            });
-                        }
-                    } else {
-                        unsafe {
-                            MessageBoxW(
-                                0,
-                                w!("This ide can only run .lua, and .py files out of box"),
-                                w!("Fatal error"),
-                                MB_ICONEXCLAMATION | MB_OK,
-                            );
-                        }
-                    }
-                }
-                if open.clicked() || self.can_open {
-                    self.can_open = false;
-                    let files = FileDialog::new()
-                        .set_title("Open")
-                        .set_directory("/")
-                        .pick_file();
-                    if files.clone().is_some() {
-                        self.last_save_path = files.clone();
-                        self.code_editor.code = openfile(self.last_save_path.clone());
-                        self.code_editor_text_lenght = self.code_editor.code.len();
-                    }
-                }
-                if save_as.clicked() || self.can_save_as {
-                    self.can_save_as = false;
-                    let files = FileDialog::new()
-                        .set_title("Save as")
-                        .set_directory("/")
-                        .save_file();
-                    if files.clone().is_some() {
-                        self.last_save_path = files.clone();
-                        savetofile(files.clone(), self.text.clone());
-                        self.code_editor_text_lenght = self.code_editor.code.len();
-                    }
-                };
-                if save.clicked() || self.can_save {
-                    //reset value
-                    self.can_save = false;
-                    if self.last_save_path.clone().is_none() {
-                        let files = FileDialog::new()
-                            .set_title("Save as")
-                            .set_directory("/")
-                            .save_file();
-                        self.last_save_path = files.clone();
-                        savetofile(self.last_save_path.clone(), self.text.clone());
-                        self.code_editor_text_lenght = self.code_editor.code.len();
-                    } else if self.code_editor_text_lenght <= self.code_editor.code.len() {
-                        savetofile(self.last_save_path.clone(), self.text.clone());
-                        self.code_editor_text_lenght = self.code_editor.code.len();
-                    } else {
-                        //do nothing
-                    }
-                }
-                if find.clicked() {
-                    self.finder_is_open = !self.finder_is_open;
-                }
-                if settings.clicked() {
-                    self.settings_window_is_open = !self.settings_window_is_open;
-                }
-                if terminal.clicked() {
-                    //newcmd();
-                    self.terminal_help = !self.terminal_help;
-                }
-                if support.clicked() {
-                    match webbrowser::open("https://discord.gg/7s3VRr4H6j") {
-                        Ok(_) => {}
-                        Err(_) => {}
-                    };
-                }
-                run.on_hover_text("CTRL + R");
-                open.on_hover_text("CTRL + O");
-                save_as.on_hover_text("CTRL + N");
-                save.on_hover_text("CTRL + S");
-                find.on_hover_text("CTRL + F");
-                settings.on_hover_text("CTRL + T");
-                support.on_hover_text("If you encounter errors make sure to contact support!");
-            });
-        });
-
-        egui::TopBottomPanel::bottom("Stats").show(ctx, |ui| {
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                let lenght = self.text.len();
-                let lines = count_lines(&self.text);
-                let final_lenght = lenght - (lines - 1);
-                ui.label(lines.to_string() + " : Lines");
-
-                //separate self.label into a vector by whitespaces, then count them
-                let trimmed_string = self.text.trim();
-                let words: Vec<&str> = trimmed_string.split_whitespace().collect();
-                ui.label(words.len().to_string() + " : Words");
-                ui.label(final_lenght.to_string() + " : Characters");
-                ui.separator();
-                let current_datetime = chrono::Local::now();
-                let datetime_str = current_datetime.format("%H:%M:%S ").to_string();
-                let sessiondate_str = self.session_started.format("%H:%M:%S ").to_string();
-                ui.label(format!("Session started : {}", sessiondate_str));
-                ui.label(format!("Current time : {}", datetime_str));
-                ctx.request_repaint();
-            });
-        });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            
-            ui.label(RichText::from("Open a file using `CTRL + O` or using the open option.").size(30.).color(Color32::LIGHT_RED));
-
-
-        
-        });
-    } */
