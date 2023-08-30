@@ -485,7 +485,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     ui.label("text");
                 }); */
             egui::CentralPanel::default().show_inside(ui, |ui|{
-                
+                  dfg
                 if *tab == 2 {
                     let frame_rect = dbg!(ui.max_rect());
                     egui::CentralPanel::default().show(self.ctx, |ui| {
