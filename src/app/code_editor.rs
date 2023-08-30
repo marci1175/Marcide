@@ -265,7 +265,7 @@ impl CodeEditor {
         &mut self,
         id: Id,
         ui: &mut egui::Ui,
-        scroll_offset: Vec2,
+        mut scroll_offset: Vec2,
         go_to_offset: bool,
     ) -> Vec2 {
         let Self {
@@ -309,7 +309,10 @@ impl CodeEditor {
         let rows = ((code_rect.height() - 5.0) / row_height).floor() as usize;
         //full retard
         let code_ref = code.clone();
-
+        /*if go_to_offset {
+            scroll_offset[1] = scroll_offset[1] * row_height;
+        }
+        */
         let text_widget = egui::TextEdit::multiline(code)
             .font(FontSelection::FontId(FontId::new(10.0, FontFamily::Monospace))) // for cursor height
             .code_editor()

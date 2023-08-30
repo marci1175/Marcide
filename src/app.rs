@@ -220,7 +220,7 @@ impl Default for AppData {
     fn default() -> Self {
         Self {
             app_data: TemplateApp::default(),
-            tree: Tree::new(vec![1, 2, 3, 4, 5]),
+            tree: Tree::new(vec![1, 2, 3]),
         }
     }
 }
@@ -285,9 +285,7 @@ impl eframe::App for AppData {
         true
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        if !self.app_data.auto_save_to_ram {
-            self.app_data.code_editor.code.clear();
-        }
+        
         
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
@@ -295,7 +293,180 @@ impl eframe::App for AppData {
         let mut added_nodes = Vec::new();
 
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(ctx, |ui|{
-            
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                //define buttons
+                let run = ui.button("Run");
+                let find = ui.button("Find");
+                let save = ui.button("Save");
+                let save_as = ui.button("Save as");
+                let open = ui.button("Open");
+                let terminal = ui.button("Terminal");
+                let settings = ui.button("Settings");
+                let support = ui.button("Support");
+                if run.clicked()  || self.app_data.can_run {
+                    if self.tree.find_tab(&4).is_none() {
+                        self.tree.push_to_first_leaf(4);
+                    };
+                    if self.app_data.terminal_mode
+                        || self.app_data.unsafe_mode
+                        || self.app_data.language == "py"
+                        || self.app_data.language == "lua"
+                    {
+                        //reset value
+                        self.app_data.can_run = false;
+                        //save to temp folder
+                        if self.app_data.last_save_path.is_none() {
+                            mkdir();
+                            
+                            //C:\Users\%user_name%\marcide.temp
+                            if let Some(mut home_dir) = home_dir() {
+                                let mut to_push: String = String::new();
+                                if !self.app_data.terminal_mode {
+                                    to_push = format!("%marcide.temp%\\temp.{}", self.app_data.language);
+                                }
+                                else if self.app_data.unsafe_mode {
+                                    to_push = format!("%marcide.temp%\\temp");
+                                }
+                                else {
+                                    to_push = format!("%marcide.temp%\\temp.bat");
+                                }
+                               
+                                home_dir.push(to_push);
+
+                                // Set the files variable
+                                let files: Option<PathBuf> = Some(home_dir);
+                                //save file
+                                savetofile(files.clone(), self.app_data.text.clone());
+                                //run file
+                                
+                                let lang = self.app_data.language.clone();
+                                let s = self.app_data.sender.clone();
+                                let terminalm = self.app_data.terminal_mode.clone();
+                                std::thread::spawn(move || {
+                                    let mut _out: String = String::new();
+                                    if !terminalm {
+                                        _out = String::from_utf8_lossy(
+                                            &runfile(files.clone(), lang).stdout,
+                                        )
+                                        .to_string();
+                                    } else {
+                                        _out = String::from_utf8_lossy(
+                                            &terminalr(files.clone()).stdout,
+                                        )
+                                        .to_string();
+                                    }
+
+                                    s.send(_out.clone()).expect("Couldnt send msg");
+                                });
+                            }
+                        } else {
+                            let files = self.app_data.last_save_path.clone();
+
+                            let lang = self.app_data.language.clone();
+                            let terminalm = self.app_data.terminal_mode.clone();
+                            let s = self.app_data.sender.clone();
+                            std::thread::spawn(move || {
+                                let mut _out: String = String::new();
+                                if !terminalm {
+                                    _out = String::from_utf8_lossy(
+                                        &runfile(files.clone(), lang).stdout,
+                                    )
+                                    .to_string();
+                                } else {
+                                    _out =
+                                        String::from_utf8_lossy(&terminalr(files.clone()).stdout)
+                                            .to_string();
+                                }
+
+                                s.send(_out.clone()).expect("Couldnt send msg");
+                            });
+                        }
+                    } else {
+                        unsafe {
+                            MessageBoxW(
+                                0,
+                                w!("This ide can only run .lua, and .py files out of box"),
+                                w!("Fatal error"),
+                                MB_ICONEXCLAMATION | MB_OK,
+                            );
+                        }
+                    }
+                }
+                if open.clicked() || self.app_data.can_open {
+                    self.app_data.can_open = false;
+                    let files = FileDialog::new()
+                        .set_title("Open")
+                        .set_directory("/")
+                        .pick_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                }
+                if save_as.clicked() || self.app_data.can_save_as {
+                    self.app_data.can_save_as = false;
+                    let files = FileDialog::new()
+                        .set_title("Save as")
+                        .set_directory("/")
+                        .save_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                };
+                if save.clicked() || self.app_data.can_save {
+                    //reset value
+                    self.app_data.can_save = false;
+                    if self.app_data.last_save_path.clone().is_none() {
+                        let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
+                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    } else {
+                        //do nothing
+                    }
+                }
+                if find.clicked() {
+                    self.app_data.finder_is_open = !self.app_data.finder_is_open;
+                    if self.tree.find_tab(&3).is_none() {
+                        self.tree.push_to_first_leaf(3);
+                    };
+                }
+                if settings.clicked() {
+                    self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
+                    if self.tree.find_tab(&5).is_none() {
+                        self.tree.push_to_first_leaf(5);
+                    };
+                }
+                if terminal.clicked() {
+                    //newcmd();
+                    self.app_data.terminal_help = !self.app_data.terminal_help;
+                    if self.tree.find_tab(&1).is_none() {
+                        self.tree.push_to_first_leaf(1);
+                    };
+                }
+                if support.clicked() {
+                    match webbrowser::open("https://discord.gg/7s3VRr4H6j") {
+                        Ok(_) => {}
+                        Err(_) => {}
+                    };
+                }
+                run.on_hover_text("CTRL + R");
+                open.on_hover_text("CTRL + O");
+                save_as.on_hover_text("CTRL + N");
+                save.on_hover_text("CTRL + S");
+                find.on_hover_text("CTRL + F");
+                settings.on_hover_text("CTRL + T");
+                support.on_hover_text("If you encounter errors make sure to contact support!");
+            });
         });
 
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Bottom, "stats").show(ctx, |ui|{
@@ -320,6 +491,7 @@ impl eframe::App for AppData {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui|{
+            ui.label("Anyád");
             DockArea::new(&mut self.tree)
                 .show_close_buttons(true)
                 //.show_add_buttons(true)
@@ -370,6 +542,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     type Tab = usize;
     ///ctx = ctx _frame = _frame
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
+        //reset find state
+        self.data.go_to_offset = false;
+
         //rest of the app
         self.data.window_size = self.frame.info().window_info.size;
         const ICON_BYTES: &[u8] = include_bytes!("../icon.ico");
@@ -492,11 +667,6 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 self.data.finder_is_open = true;
             }
         }
-        if ctrlis_pressed && ris_pressed && has_focus {
-            if !self.data.output_window_is_open {
-                self.data.can_run = !self.data.can_run
-            }
-        }
         if ctrlis_pressed && fis_pressed && has_focus {
             if !self.data.finder_is_open {
                 self.data.finder_is_open = !self.data.finder_is_open;
@@ -513,7 +683,35 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         if ctrlis_pressed && nis_pressed && has_focus {
             self.data.can_save_as = !self.data.can_save_as;
         }
-        
+        if *tab == 3 {
+            let occurence: usize;
+                    ui.label("Finder");
+                    ui.text_edit_singleline(&mut self.data.to_find);
+                    if ui.button("Search").clicked() {
+                        let occur: io::Result<Vec<usize>> =
+                            finder(self.data.code_editor.code.clone(), self.data.to_find.clone());
+                        if occur.as_ref().unwrap().len() == 0 {
+                            self.data.is_found = None;
+                        } else {
+                            self.data.go_to_offset = true;
+                            //let px = ui.fonts(|f| f.row_height(&egui::FontId { size: 10.0, family: egui::FontFamily::Monospace }));
+                            occurence = occur.as_ref().unwrap()[0];
+                            self.data.scroll_offset[1] = occurence as f32;
+                            dbg!(self.data.scroll_offset[1]);
+                            self.data.occurences = occur.unwrap().len();
+                            self.data.is_found = Some(true);
+                        }
+                        //update scroll offset and done!
+                    }
+                    if self.data.is_found.is_none() {
+                        ui.colored_label(Color32::RED, "0 Occurences in the text");
+                    } else {
+                        ui.colored_label(
+                            Color32::GREEN,
+                            format!("Appears in {} line(s)", self.data.occurences),
+                        );
+                    }
+        }
         if *tab == 2 {
             let frame_rect = ui.max_rect();
             ui.allocate_ui_at_rect(frame_rect, |ui|{
@@ -522,7 +720,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                    |ui| {
                     self.data.scroll_offset = code_editor::CodeEditor::show(
                         &mut self.data.code_editor,
-                        "id".into(),
+                        "code".into(),
                             ui,
                             self.data.scroll_offset,
                             self.data.go_to_offset,
