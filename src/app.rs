@@ -300,13 +300,13 @@ impl eframe::App for AppData {
 
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Bottom, "stats").show(ctx, |ui|{
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                let lenght = self.app_data.text.len();
-                let lines = count_lines(&self.app_data.text);
+                let lenght = self.app_data.code_editor.code.len();
+                let lines = count_lines(&self.app_data.code_editor.code);
                 let final_lenght = lenght - (lines - 1);
                 ui.label(lines.to_string() + " : Lines");
 
                 //separate self.label into a vector by whitespaces, then count them
-                let trimmed_string = self.app_data.text.trim();
+                let trimmed_string = self.app_data.code_editor.code.trim();
                 let words: Vec<&str> = trimmed_string.split_whitespace().collect();
                 ui.label(words.len().to_string() + " : Words");
                 ui.label(final_lenght.to_string() + " : Characters");
