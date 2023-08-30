@@ -487,25 +487,22 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             egui::CentralPanel::default().show_inside(ui, |ui|{
             
                 if *tab == 2 {
-                    let frame_rect = dbg!(ui.max_rect());
-                    
-                        ui.allocate_ui_at_rect(frame_rect, |ui|{
-                            ui.with_layout(
-                                egui::Layout::top_down_justified(egui::Align::Center),
-                                |ui| {
-                                    self.data.scroll_offset = code_editor::CodeEditor::show(
-                                        &mut self.data.code_editor,
-                                        "id".into(),
-                                        ui,
-                                        self.data.scroll_offset,
-                                        self.data.go_to_offset,
-                                    );
-                                },
-                            );
-                        });
-                        
-                    
-                    
+                    let frame_rect = ui.max_rect();
+                    ui.allocate_ui_at_rect(frame_rect, |ui|{
+                        ui.with_layout(
+                           egui::Layout::top_down_justified(egui::Align::Center),
+                           |ui| {
+                            self.data.scroll_offset = code_editor::CodeEditor::show(
+                                &mut self.data.code_editor,
+                                "id".into(),
+                                    ui,
+                                    self.data.scroll_offset,
+                                    self.data.go_to_offset,
+                                );
+                            },
+                        );
+                    });
+                           
                 }
                 if *tab == 1 {
                     ui.style_mut().visuals.window_fill = Color32::BLACK;
