@@ -1,10 +1,13 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
-use egui::{Layout, Stroke, Rounding, Ui, Widget};
+
+use egui::{Rounding, Stroke, Layout};
 use egui::{Color32, RichText, TextBuffer, Vec2};
 
+use egui_dock::tree;
 use egui_terminal::term::CommandBuilder;
 use rfd::FileDialog;
+use syntect::highlighting::Color;
 use std::io;
 use std::env;
 use winreg::enums::*;
@@ -199,6 +202,7 @@ impl Default for TemplateApp {
 }
 
 struct TabViewer<'a> {
+    //tree: &'a mut Tree<usize>,
     added_nodes: &'a mut Vec<NodeIndex>,
     ctx: &'a egui::Context,
     frame: &'a mut Frame,
@@ -288,31 +292,60 @@ impl eframe::App for AppData {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        
         let mut added_nodes = Vec::new();
-        DockArea::new(&mut self.tree)
-            .show_close_buttons(true)
-            //.show_add_buttons(true)
-            .style({
-                let mut style = Style::from_egui(ctx.style().as_ref());
-                style.tabs.fill_tab_bar = true;
-                style
-            })
-            .show(
-                ctx,
-                &mut TabViewer {
-                    added_nodes: &mut added_nodes,
+
+        egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(ctx, |ui|{
+            
+        });
+
+        egui::TopBottomPanel::new(egui::panel::TopBottomSide::Bottom, "stats").show(ctx, |ui|{
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                let lenght = self.app_data.text.len();
+                let lines = count_lines(&self.app_data.text);
+                let final_lenght = lenght - (lines - 1);
+                ui.label(lines.to_string() + " : Lines");
+
+                //separate self.label into a vector by whitespaces, then count them
+                let trimmed_string = self.app_data.text.trim();
+                let words: Vec<&str> = trimmed_string.split_whitespace().collect();
+                ui.label(words.len().to_string() + " : Words");
+                ui.label(final_lenght.to_string() + " : Characters");
+                ui.separator();
+                let current_datetime = chrono::Local::now();
+                let datetime_str = current_datetime.format("%H:%M:%S ").to_string();
+                let sessiondate_str = self.app_data.session_started.format("%H:%M:%S ").to_string();
+                ui.label(format!("Session started : {}", sessiondate_str));
+                ui.label(format!("Current time : {}", datetime_str));
+                ctx.request_repaint();
+            });
+        });
+        egui::CentralPanel::default().show(ctx, |ui|{
+            DockArea::new(&mut self.tree)
+                .show_close_buttons(true)
+                //.show_add_buttons(true)
+                .style({
+                    let mut style = Style::from_egui(ctx.style().as_ref());
+                    style.tabs.fill_tab_bar = true;
+                    style
+                })
+                .show(
                     ctx,
-                    frame : _frame,
-                    data: &mut self.app_data,
-                },
-            );
+                    &mut TabViewer {
+                        //tree: &mut self.tree,
+                        added_nodes: &mut added_nodes,
+                        ctx,
+                        frame : _frame,
+                        data: &mut self.app_data,
+                    },
+                );
+        });
 
         added_nodes.drain(..).for_each(|node| {
             self.tree.set_focused_node(node);
             self.tree.push_to_focused_leaf(self.app_data.counter);
             self.app_data.counter += 1;
         });
+        
     }
 }
 
@@ -481,55 +514,50 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             self.data.can_save_as = !self.data.can_save_as;
         }
         
-        /*egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(self.ctx, |ui|{
-                    ui.label("text");
-                }); */
-            egui::CentralPanel::default().show_inside(ui, |ui|{
-            
-                if *tab == 2 {
-                    let frame_rect = ui.max_rect();
-                    ui.allocate_ui_at_rect(frame_rect, |ui|{
-                        ui.with_layout(
-                           egui::Layout::top_down_justified(egui::Align::Center),
-                           |ui| {
-                            self.data.scroll_offset = code_editor::CodeEditor::show(
-                                &mut self.data.code_editor,
-                                "id".into(),
-                                    ui,
-                                    self.data.scroll_offset,
-                                    self.data.go_to_offset,
-                                );
-                            },
+        if *tab == 2 {
+            let frame_rect = ui.max_rect();
+            ui.allocate_ui_at_rect(frame_rect, |ui|{
+                ui.with_layout(
+                   egui::Layout::top_down_justified(egui::Align::Center),
+                   |ui| {
+                    self.data.scroll_offset = code_editor::CodeEditor::show(
+                        &mut self.data.code_editor,
+                        "id".into(),
+                            ui,
+                            self.data.scroll_offset,
+                            self.data.go_to_offset,
                         );
-                    });
-                           
-                }
-                if *tab == 1 {
-                    ui.style_mut().visuals.window_fill = Color32::BLACK;
-                            
-                    let frame_rect = ui.max_rect().shrink(5.0);
-                            
-                    ui.allocate_space(egui::vec2(ui.available_width(), 5.));
-                    ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
-        
-                    ui.painter().rect(
-                        frame_rect,
-                        Rounding::same(5.0),
-                        Color32::BLACK,
-                        Stroke::NONE,
-                    );
-                    let code_rect = frame_rect.shrink(5.0);
-            
-                    let mut frame_ui = ui.child_ui(code_rect, Layout::default());
-            
-                    egui::ScrollArea::vertical()
-                        .id_source("terminal")
-                        .stick_to_bottom(true)
-                        .show(&mut frame_ui, |ui| {
-                            ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
-                        });
-                }
+                    },
+                );
             });
+                   
+        }
+        if *tab == 1 {
+            ui.style_mut().visuals.window_fill = Color32::BLACK;
+                    
+            let frame_rect = ui.max_rect().shrink(5.0);
+                    
+            ui.allocate_space(egui::vec2(ui.available_width(), 5.));
+            ui.allocate_space(egui::vec2(ui.available_width(), ui.available_height() - 5.));
+
+            ui.painter().rect(
+                frame_rect,
+                Rounding::same(5.0),
+                Color32::BLACK,
+                Stroke::NONE,
+            );
+            let code_rect = frame_rect.shrink(5.0);
+    
+            let mut frame_ui = ui.child_ui(code_rect, Layout::default());
+    
+            egui::ScrollArea::vertical()
+                .id_source("terminal")
+                .stick_to_bottom(true)
+                .show(&mut frame_ui, |ui| {
+                    ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
+                });
+        }
+        
         
         //tab 1 == code editor tab 2 == terminal
         
