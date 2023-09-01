@@ -1,13 +1,14 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 
-use egui::{Rounding, Stroke, Layout};
+use egui::{Rounding, Stroke, Layout, Response};
 use egui::{Color32, RichText, TextBuffer, Vec2};
 
 use egui_dock::tree;
 use egui_terminal::term::CommandBuilder;
 use rfd::FileDialog;
 use syntect::highlighting::Color;
+use termwiz::caps::ColorLevel;
 use std::io;
 use std::env;
 use winreg::enums::*;
@@ -285,15 +286,109 @@ impl eframe::App for AppData {
         true
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        
+
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut added_nodes = Vec::new();
 
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(ctx, |ui|{
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                 //define buttons
+                let file = ui.menu_button("File", |ui|{
+                    let new = ui.button("New").on_hover_text("CTRL + N");
+                    let open = ui.button("Open").on_hover_text("CTRL + O");
+                    let save = ui.button("Save").on_hover_text("CTRL + S");
+                    let save_as = ui.button("Save as").on_hover_text("CTRL + M");
+                    
+                    if new.clicked() {
+                        self.app_data.code_editor.code.clear();
+                        self.app_data.can_save_as = false;
+                        let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                        if files.clone().is_some() {
+                            self.app_data.last_save_path = files.clone();
+                            savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                    }
+                    if open.clicked() {
+                        //self.app_data.can_open = false;
+                        let files = FileDialog::new()
+                            .set_title("Open")
+                            .set_directory("/")
+                            .pick_file();
+                        if files.clone().is_some() {
+                            self.app_data.last_save_path = files.clone();
+                            self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
+                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        }
+                    }
+                    if save.clicked() {
+                        if self.app_data.last_save_path.clone().is_none() {
+                            let files = FileDialog::new()
+                                .set_title("Save as")
+                                .set_directory("/")
+                                .save_file();
+                            self.app_data.last_save_path = files.clone();
+                            savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
+                            savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        }
+                    }
+                    if save_as.clicked() {
+                        self.app_data.can_save_as = false;
+                        let files = FileDialog::new()
+                            .set_title("Save as")
+                            .set_directory("/")
+                            .save_file();
+                        if files.clone().is_some() {
+                            self.app_data.last_save_path = files.clone();
+                            savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        }
+                    }
+                    
+                });
+                let edit = ui.menu_button("Edit", |ui| {
+                    let copy = ui.button("Copy").on_hover_text("CTRL + C");
+                    let paste = ui.button("Paste").on_hover_text("CTRL + V");
+                    let cut = ui.button("Cut").on_hover_text("CTRL + X");
+                    let undo = ui.button("Undo").on_hover_text("CTRL + Z");
+                    let redo = ui.button("Redo").on_hover_text("CTRL + Y");
+                    let select_all = ui.button("Select all").on_hover_text("CTRL + A");
+
+                    if copy.clicked() {
+                        
+                    }
+                    if paste.clicked() {
+                        
+                    }
+                    if cut.clicked() {
+                        
+                    }
+                    if undo.clicked() {
+
+                    }
+                    if redo.clicked() {
+                    
+                    }
+                    if select_all.clicked() {
+
+                    }
+                });
+
+                //code
+                let run = ui.button("Run").on_hover_text("CTRL + R");
+                if run.clicked() {
+                    
+                }
+                
+                /*
                 let run = ui.button("Run");
                 let find = ui.button("Find");
                 let save = ui.button("Save");
@@ -302,6 +397,8 @@ impl eframe::App for AppData {
                 let terminal = ui.button("Terminal");
                 let settings = ui.button("Settings");
                 let support = ui.button("Support");
+                 */
+                /*
                 if run.clicked()  || self.app_data.can_run {
                     if self.tree.find_tab(&4).is_none() {
                         self.tree.push_to_first_leaf(4);
@@ -392,43 +489,15 @@ impl eframe::App for AppData {
                     }
                 }
                 if open.clicked() || self.app_data.can_open {
-                    self.app_data.can_open = false;
-                    let files = FileDialog::new()
-                        .set_title("Open")
-                        .set_directory("/")
-                        .pick_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    
                 }
                 if save_as.clicked() || self.app_data.can_save_as {
-                    self.app_data.can_save_as = false;
-                    let files = FileDialog::new()
-                        .set_title("Save as")
-                        .set_directory("/")
-                        .save_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    
                 };
                 if save.clicked() || self.app_data.can_save {
                     //reset value
                     self.app_data.can_save = false;
-                    if self.app_data.last_save_path.clone().is_none() {
-                        let files = FileDialog::new()
-                            .set_title("Save as")
-                            .set_directory("/")
-                            .save_file();
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
-                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    
                     } else {
                         //do nothing
                     }
@@ -465,7 +534,9 @@ impl eframe::App for AppData {
                 find.on_hover_text("CTRL + F");
                 settings.on_hover_text("CTRL + T");
                 support.on_hover_text("If you encounter errors make sure to contact support!");
+                */
             });
+            
         });
 
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Bottom, "stats").show(ctx, |ui|{
@@ -490,7 +561,7 @@ impl eframe::App for AppData {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui|{
-            ui.label("Anyád");
+            ui.label(RichText::from("Open a file to start editing!").size(20.).color(Color32::LIGHT_BLUE));
             DockArea::new(&mut self.tree)
                 .show_close_buttons(true)
                 //.show_add_buttons(true)
@@ -711,7 +782,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                         );
                     }
         }
-        if *tab == 2 {
+        else if *tab == 2 {
             let frame_rect = ui.max_rect();
             ui.allocate_ui_at_rect(frame_rect, |ui|{
                 ui.with_layout(
@@ -729,7 +800,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             });
                    
         }
-        if *tab == 1 {
+        else if *tab == 1 {
             ui.style_mut().visuals.window_fill = Color32::BLACK;
                     
             let frame_rect = ui.max_rect().shrink(5.0);
@@ -754,7 +825,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
                 });
         }
-        
+        else {
+            //infinite terminals
+        }
         
         //tab 1 == code editor tab 2 == terminal
         
