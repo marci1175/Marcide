@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, VK_CONTROL, VK_F, VK_F11, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
+    GetAsyncKeyState, VK_CONTROL, VK_F, VK_F11, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T, VK_M,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, MB_ICONERROR, MB_ICONEXCLAMATION, MB_OK, MB_YESNOCANCEL,
@@ -216,6 +216,7 @@ pub struct AppData {
     app_data : TemplateApp,
     #[serde(skip)]
     tree: Tree<usize>,
+
 }
 impl Default for AppData {
     fn default() -> Self {
@@ -290,8 +291,56 @@ impl eframe::App for AppData {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let mut added_nodes = Vec::new();
+        let altimput = unsafe { GetAsyncKeyState(VK_RMENU as i32) as u16 & 0x8000 != 0};
+        let ninput = unsafe { GetAsyncKeyState(VK_N as i32) as u16 & 0x8000 != 0};
+        let oinput = unsafe { GetAsyncKeyState(VK_O as i32) as u16 & 0x8000 != 0};
+        let rinput = unsafe { GetAsyncKeyState(VK_R as i32) as u16 & 0x8000 != 0};
+        let tinput = unsafe { GetAsyncKeyState(VK_T as i32) as u16 & 0x8000 != 0};
+        
+        let has_focus = ctx.input(|i| i.focused);
+        let ctrlinput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000 != 0};
+        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000) != 0 };
+        let sinput = unsafe { GetAsyncKeyState(VK_S as i32) as u16 & 0x8000 != 0};
+        let finput = unsafe { GetAsyncKeyState(VK_F as i32) as u16 & 0x8000 != 0};
+        let minput = unsafe { GetAsyncKeyState(VK_M as i32) as u16 & 0x8000 != 0};
+        dbg!(minput);
 
+        let mut added_nodes = Vec::new();
+            let tx = self.app_data.autosave_sender.get_or_insert_with(|| {
+                let (tx, rx) = mpsc::channel::<String>();
+
+                std::thread::spawn(move || loop {
+                    match rx.try_recv() {
+                        Ok(text) => {
+                            //println!("{}", lines[1]);
+                            let lines: Vec<&str> =
+                                text.split("VxpAM$616*9Y8G%tOp$en*KDJ").collect();
+
+                            savetofile(Some(PathBuf::from(lines[1].trim())), lines[0].to_string());
+                        }
+                        Err(_) => {
+                            //"SzeRinTetEk tuDja A hArmAdiK szAbÁLyT?"
+                        }
+                    };
+                });
+                tx
+            });
+            if self.app_data.auto_save {
+                if let Some(path) = self.app_data.last_save_path.clone() {
+                    let data_to_send: String = format!(
+                        "{} VxpAM$616*9Y8G%tOp$en*KDJ {}",
+                        self.app_data.code_editor.code.clone(),
+                        path.to_str().unwrap_or_default().to_string()
+                    );
+                    if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
+                        match tx.send(data_to_send) {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        };
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                }
+        }
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(ctx, |ui|{
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                 //define buttons
@@ -300,8 +349,15 @@ impl eframe::App for AppData {
                     let open = ui.button("Open").on_hover_text("CTRL + O");
                     let save = ui.button("Save").on_hover_text("CTRL + S");
                     let save_as = ui.button("Save as").on_hover_text("CTRL + M");
-                    
-                    if new.clicked() {
+                    ui.checkbox(&mut self.app_data.auto_save, "Auto save");
+                    let settings = ui.button("Settings");
+                    if settings.clicked() {
+                        self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
+                        if self.tree.find_tab(&5).is_none() {
+                            self.tree.push_to_first_leaf(5);
+                        };
+                    }
+                    if new.clicked() || ninput && has_focus && ctrlinput{
                         self.app_data.code_editor.code.clear();
                         self.app_data.can_save_as = false;
                         let files = FileDialog::new()
@@ -314,7 +370,7 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                     }
                     }
-                    if open.clicked() {
+                    if open.clicked() || oinput && has_focus && ctrlinput {
                         //self.app_data.can_open = false;
                         let files = FileDialog::new()
                             .set_title("Open")
@@ -326,7 +382,7 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                         }
                     }
-                    if save.clicked() {
+                    if save.clicked() || sinput && has_focus && ctrlinput {
                         if self.app_data.last_save_path.clone().is_none() {
                             let files = FileDialog::new()
                                 .set_title("Save as")
@@ -340,7 +396,7 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                         }
                     }
-                    if save_as.clicked() {
+                    if save_as.clicked() || minput && has_focus && ctrlinput{
                         self.app_data.can_save_as = false;
                         let files = FileDialog::new()
                             .set_title("Save as")
@@ -352,8 +408,8 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                         }
                     }
-                    
                 });
+                
                 let edit = ui.menu_button("Edit", |ui| {
                     let copy = ui.button("Copy").on_hover_text("CTRL + C");
                     let paste = ui.button("Paste").on_hover_text("CTRL + V");
@@ -361,7 +417,8 @@ impl eframe::App for AppData {
                     let undo = ui.button("Undo").on_hover_text("CTRL + Z");
                     let redo = ui.button("Redo").on_hover_text("CTRL + Y");
                     let select_all = ui.button("Select all").on_hover_text("CTRL + A");
-
+                    let find = ui.button("Find").on_hover_text("CTRL + F");
+                    
                     if copy.clicked() {
                         
                     }
@@ -380,26 +437,17 @@ impl eframe::App for AppData {
                     if select_all.clicked() {
 
                     }
+                    if find.clicked() || finput && has_focus && ctrlinput {
+                        self.app_data.finder_is_open = !self.app_data.finder_is_open;
+                        if self.tree.find_tab(&3).is_none() {
+                            self.tree.push_to_first_leaf(3);
+                        };
+                    }
                 });
 
                 //code
                 let run = ui.button("Run").on_hover_text("CTRL + R");
-                if run.clicked() {
-                    
-                }
-                
-                /*
-                let run = ui.button("Run");
-                let find = ui.button("Find");
-                let save = ui.button("Save");
-                let save_as = ui.button("Save as");
-                let open = ui.button("Open");
-                let terminal = ui.button("Terminal");
-                let settings = ui.button("Settings");
-                let support = ui.button("Support");
-                 */
-                /*
-                if run.clicked()  || self.app_data.can_run {
+                if run.clicked() || rinput && has_focus && ctrlinput {
                     if self.tree.find_tab(&4).is_none() {
                         self.tree.push_to_first_leaf(4);
                     };
@@ -488,52 +536,31 @@ impl eframe::App for AppData {
                         }
                     }
                 }
-                if open.clicked() || self.app_data.can_open {
-                    
-                }
-                if save_as.clicked() || self.app_data.can_save_as {
-                    
-                };
-                if save.clicked() || self.app_data.can_save {
-                    //reset value
-                    self.app_data.can_save = false;
-                    
-                    } else {
-                        //do nothing
-                    }
-                }
-                if find.clicked() {
-                    self.app_data.finder_is_open = !self.app_data.finder_is_open;
-                    if self.tree.find_tab(&3).is_none() {
-                        self.tree.push_to_first_leaf(3);
-                    };
-                }
-                if settings.clicked() {
-                    self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
-                    if self.tree.find_tab(&5).is_none() {
-                        self.tree.push_to_first_leaf(5);
-                    };
-                }
-                if terminal.clicked() {
-                    //newcmd();
+                
+                let terminal = ui.button("Terminal").on_hover_text("CTRL + T");
+                if terminal.clicked() || tinput && has_focus && ctrlinput {
                     self.app_data.terminal_help = !self.app_data.terminal_help;
                     if self.tree.find_tab(&1).is_none() {
                         self.tree.push_to_first_leaf(1);
                     };
                 }
-                if support.clicked() {
-                    match webbrowser::open("https://discord.gg/7s3VRr4H6j") {
-                        Ok(_) => {}
-                        Err(_) => {}
-                    };
+                
+                let help = ui.button("Help").on_hover_text("Official discord server");
+                if help.clicked() {
+                        match webbrowser::open("https://discord.gg/7s3VRr4H6j") {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        };
                 }
+                /*
+                
                 run.on_hover_text("CTRL + R");
                 open.on_hover_text("CTRL + O");
                 save_as.on_hover_text("CTRL + N");
                 save.on_hover_text("CTRL + S");
                 find.on_hover_text("CTRL + F");
                 settings.on_hover_text("CTRL + T");
-                support.on_hover_text("If you encounter errors make sure to contact support!");
+                
                 */
             });
             
@@ -700,59 +727,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         self.frame.set_fullscreen(self.data.window_options_full_screen);
         self.frame.set_always_on_top(self.data.window_options_always_on_top);
         //get alt input => if true ctrl => false
-        let altimput = unsafe { GetAsyncKeyState(VK_RMENU as i32) };
-        let alt_is_pressed = (altimput as u16 & 0x8000) != 0;
-        let nimput = unsafe { GetAsyncKeyState(VK_N as i32) };
-        let nis_pressed = (nimput as u16 & 0x8000) != 0;
-        let oimput = unsafe { GetAsyncKeyState(VK_O as i32) };
-        let ois_pressed = (oimput as u16 & 0x8000) != 0;
-        let rimput = unsafe { GetAsyncKeyState(VK_R as i32) };
-        let ris_pressed = (rimput as u16 & 0x8000) != 0;
-        let timput = unsafe { GetAsyncKeyState(VK_T as i32) };
-        let tis_pressed = (timput as u16 & 0x8000) != 0;
-        let has_focus = self.ctx.input(|i| i.focused);
-        let ctrlimput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) };
-        let mut ctrlis_pressed = (ctrlimput as u16 & 0x8000) != 0;
-        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000) != 0 };
-        //listen if ENTER key is pressed so we can send the message, except when r or l shift is pressed
-        let sinp = unsafe { GetAsyncKeyState(VK_S as i32) };
-        let sis_pressed = (sinp as u16 & 0x8000) != 0;
-        //if f is pressed
-        let fimput = unsafe { GetAsyncKeyState(VK_F as i32) };
-        let fis_pressed = (fimput as u16 & 0x8000) != 0;
-    
-        //save hotkey
-        if f11input {
-            self.data.window_options_full_screen = !self.data.window_options_full_screen;
-        }
-        if alt_is_pressed {
-            ctrlis_pressed = false;
-        }
-        if sis_pressed && ctrlis_pressed && has_focus {
-            self.data.can_save = !self.data.can_save;
-        }
-        //finder hotkey
-        if ctrlis_pressed && fis_pressed && has_focus {
-            if !self.data.finder_is_open {
-                self.data.finder_is_open = true;
-            }
-        }
-        if ctrlis_pressed && fis_pressed && has_focus {
-            if !self.data.finder_is_open {
-                self.data.finder_is_open = !self.data.finder_is_open;
-            }
-        }
-        if ctrlis_pressed && ois_pressed && has_focus {
-            self.data.can_open = !self.data.can_open;
-        }
-        if ctrlis_pressed && tis_pressed && has_focus {
-            if !self.data.settings_window_is_open {
-                self.data.settings_window_is_open = !self.data.settings_window_is_open;
-            }
-        }
-        if ctrlis_pressed && nis_pressed && has_focus {
-            self.data.can_save_as = !self.data.can_save_as;
-        }
+        
         if *tab == 3 {
             let occurence: usize;
                     ui.label("Finder");
@@ -764,9 +739,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                             self.data.is_found = None;
                         } else {
                             self.data.go_to_offset = true;
-                            //let px = ui.fonts(|f| f.row_height(&egui::FontId { size: 10.0, family: egui::FontFamily::Monospace }));
+                            let px = ui.fonts(|f| f.row_height(&egui::FontId { size: 10.0, family: egui::FontFamily::Monospace }));
                             occurence = occur.as_ref().unwrap()[0];
-                            self.data.scroll_offset[1] = occurence as f32;
+                            self.data.scroll_offset[1] = occurence as f32 * px;
                             dbg!(self.data.scroll_offset[1]);
                             self.data.occurences = occur.unwrap().len();
                             self.data.is_found = Some(true);
@@ -824,6 +799,212 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 .show(&mut frame_ui, |ui| {
                     ui.add(terminal::new(&mut self.data.terminal_terminal_style, ui.available_size()));
                 });
+        }
+        else if *tab == 4 {
+            
+        }
+        else if *tab == 5 {
+                    ui.label(RichText::from("Application").size(20.0));
+                    if ui.button("Add to windows context menu").clicked() {
+                        let path = format!("{}", env::current_dir().unwrap().display());
+                        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+                        let environment_key = hklm.open_subkey_with_flags(
+                            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                            KEY_READ | KEY_WRITE,
+                        );
+
+                        match environment_key {
+                            Ok(key) => {
+                                // Read the existing PATH value
+                                let mut path_value: String = key.get_value("PATH").unwrap_or_default();
+
+                                // Append the new path to the existing value
+                                if !path_value.is_empty() {
+                                    path_value.push_str(";");
+                                }
+                                path_value.push_str(&path);
+
+                                // Set the modified PATH value
+                                key.set_value("PATH", &path_value).expect("Failed to set value");
+
+                                // Notify the user about the updated PATH
+                            }
+                            Err(err) => {
+                                eprintln!("Error: {}", err);
+                            }
+                        }
+                        
+                        if let Ok(exe_path) = env::current_exe() {
+                            let app_path = exe_path;
+                            let _ = std::process::Command::new("reg")
+                                .args(&[
+                                    "add",
+                                    "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide\\command",
+                                    "/ve",
+                                    "/d",
+                                    &format!("\"{}\" \"%1\"", app_path.display()),
+                                    "/f",
+                                ])
+                                .output()
+                                .expect("Failed to execute command");
+                            let path = format!("C:\\Users\\{}\\AppData\\Roaming\\Marcide\\data\\icon.ico", env::var("USERNAME").unwrap());
+                            let mut output_file = std::fs::File::create(path).expect("Failed to create file");
+                            io::Write::write_all(&mut output_file, ICON_BYTES).expect("Failed to write to file");
+                            let icon_path = format!(r#""C:\\Users\\{}\\AppData\\Roaming\\Marcide\\data\\icon.ico""#, env::var("USERNAME").unwrap());
+                            let _ = std::process::Command::new("reg")
+                                .args(&[
+                                    "add",
+                                    "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
+                                    "/v",
+                                    "Icon",
+                                    "/d",
+                                    &format!("{}", icon_path),
+                                    "/f",
+                                ])
+                                .output()
+                                .expect("Failed to execute command");
+                        }
+                    };
+                    if ui.button("Remove from windows context menu").clicked() {
+                        let path = format!("{}", env::current_dir().unwrap().display());
+                        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+                        let environment_key = hklm.open_subkey_with_flags(
+                            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                            KEY_READ | KEY_WRITE,
+                        );
+
+                        match environment_key {
+                            Ok(key) => {
+                                // Read the existing PATH value
+                                let path_value: String = key.get_value("Path").unwrap_or_default();
+
+                                // Split the existing paths by semicolon
+                                let paths: Vec<_> = path_value.split(';').collect();
+
+                                // Create a new PATH value without the path to remove
+                                let new_paths: Vec<_> = paths.into_iter().filter(|&p| p != path).collect();
+                                let new_path_value = new_paths.join(";");
+
+                                // Set the modified PATH value
+                                key.set_value("Path", &new_path_value).expect("Failed to set value");
+
+                                // Notify the user about the updated PATH
+                                println!("Updated PATH: {}", new_path_value);
+                            }
+                            Err(err) => {
+                                eprintln!("Error: {}", err);
+                            }
+                        }
+                        let _ = std::process::Command::new("reg")
+                            .args(&[
+                                "delete",
+                                "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
+                                "/f",
+                            ])
+                            .output()
+                            .expect("Failed to execute command");
+                    };
+                    ui.separator();
+                    ui.label(RichText::from("Window").size(20.0));
+                    ui.checkbox(&mut self.data.window_options_always_on_top, "Always on top");
+                    ui.separator();
+                    ui.label(egui::RichText::from("File handling").size(20.0));
+                    ui.checkbox(&mut self.data.auto_save, "Autosave to file");
+                    if self.data.auto_save {
+                        ui.label(
+                            "Autosave will only turn on after you have saved your file somewhere.",
+                        );
+                    }
+                    //this will enable/disable the savestate feature to codeeditor.code
+                    ui.checkbox(&mut self.data.auto_save_to_ram, "Autosave");
+                    if self.data.auto_save_to_ram {
+                        ui.label("This will save your text temporarily in the application. ");
+                    }
+                    ui.separator();
+                    ui.label(egui::RichText::from("Programming language").size(20.0));
+                    ui.text_edit_singleline(&mut self.data.code_editor.language);
+                    if self.data.code_editor.language == "quran"
+                        || self.data.code_editor.language == "Quran"
+                        || self.data.code_editor.language == "Korán"
+                        || self.data.code_editor.language == "korán"
+                    {
+                        ui.hyperlink_to("Quran", "https://mek.oszk.hu/06500/06534/06534.pdf");
+                    }
+                    if self.data.code_editor.language == "marci1175"
+                        || self.data.code_editor.language == "marci"
+                        || self.data.code_editor.language == "Marci"
+                        || self.data.code_editor.language == "Marcell"
+                        || self.data.code_editor.language == "Varga Marcell"
+                    {
+                        ui.separator();
+                        ui.label("Credits");
+                        ui.separator();
+                        ui.label(
+                            "Made by : Varga Marcell also known as marci1175 at 5111 days old",
+                        );
+                        ui.label("Had so much fun developing this lol.");
+                        ui.hyperlink_to("Github", "https://github.com/marci1175");
+                    }
+                    if self.data.code_editor.language == "py" || self.data.code_editor.language == "lua" {
+                        ui.checkbox(&mut self.data.is_gui_development, "Gui mode");
+                        if self.data.is_gui_development {
+                            ui.label(RichText::from("Output window wont show up when running the application, with gui mode.").color(Color32::LIGHT_YELLOW));
+                            self.data.output_window_is_open = false;
+                        }
+                    }
+                    else {
+                        self.data.is_gui_development = false;
+                    }
+                    if self.data.code_editor.language == "bat" || self.data.code_editor.language == "cmd" || self.data.code_editor.language == "ps1" || self.data.code_editor.language == "vbs" || self.data.code_editor.language == "wsf" || self.data.code_editor.language == "reg" {
+                        self.data.terminal_mode = true;
+                        ui.label(RichText::from("Terminal mode is on, but syntaxing is unavailable").color(Color32::LIGHT_YELLOW));
+                    }
+                    else if !self.data.unsafe_mode {
+                        self.data.terminal_mode = false;
+                    }
+                    ui.checkbox(&mut self.data.unsafe_mode, "Unsafe mode");
+                    if self.data.unsafe_mode {
+                        ui.label(
+                            "With unsafe mode on you can try running any programming language added to PATH",
+                        );
+                        ui.checkbox(&mut self.data.terminal_mode, "Terminal mode");
+                    }
+                    if self.data.terminal_mode {
+                        ui.label("You can use marcide to excecute terminal commands");
+                    }
+                    ui.separator();
+                    ui.label(RichText::from("Configuration").size(20.0));
+                    ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui|{
+                        if ui.button("Export").clicked() {
+                            let files = FileDialog::new()
+                            .set_title("Save as")
+                            .add_filter("Marcide config", &["marcfg"])
+                            .set_directory("/")
+                            .save_file();
+                            if files.clone().is_some() {
+                                let config = format!("{}\n{}\n{}\n{}\n{}\n{}\n{}",self.data.window_options_always_on_top, self.data.auto_save , self.data.auto_save_to_ram, self.data.language, self.data.is_gui_development, self.data.terminal_mode, self.data.unsafe_mode);
+                                savetofile(files.clone(), config);
+                            };
+                        }
+                        if ui.button("Import").clicked() {
+                            let files = FileDialog::new()
+                                .set_title("Save as")
+                                .add_filter("Marcide config", &["marcfg"])
+                                .set_directory("/")
+                                .pick_file();
+                            let contains = openfile(files);
+                            let lines : Vec<&str> = contains.lines().collect();
+                            //xd
+                            self.data.window_options_always_on_top = trueorfalse(lines[0].to_owned());
+                            self.data.auto_save = trueorfalse(lines[1].to_owned());
+                            self.data.auto_save_to_ram = trueorfalse(lines[2].to_owned());
+                            self.data.language = lines[3].to_owned();
+                            self.data.is_gui_development = trueorfalse(lines[4].to_owned());
+                            self.data.terminal_mode = trueorfalse(lines[5].to_owned());
+                            self.data.unsafe_mode = trueorfalse(lines[6].to_owned());
+
+                        };
+                    });
         }
         else {
             //infinite terminals
