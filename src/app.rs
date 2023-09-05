@@ -4,7 +4,6 @@ use dirs::home_dir;
 use egui::{Rounding, Stroke, Layout, Response};
 use egui::{Color32, RichText, TextBuffer, Vec2};
 
-use egui_dock::tree;
 use egui_terminal::term::CommandBuilder;
 use rfd::FileDialog;
 use syntect::highlighting::Color;
@@ -351,13 +350,7 @@ impl eframe::App for AppData {
                     let save_as = ui.button("Save as").on_hover_text("CTRL + M");
                     ui.checkbox(&mut self.app_data.auto_save, "Auto save");
                     let settings = ui.button("Settings");
-                    if settings.clicked() {
-                        self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
-                        if self.tree.find_tab(&5).is_none() {
-                            self.tree.push_to_first_leaf(5);
-                        };
-                    }
-                    if new.clicked() || ninput && has_focus && ctrlinput{
+                    if new.clicked() {
                         self.app_data.code_editor.code.clear();
                         self.app_data.can_save_as = false;
                         let files = FileDialog::new()
@@ -368,11 +361,11 @@ impl eframe::App for AppData {
                             self.app_data.last_save_path = files.clone();
                             savetofile(files.clone(), self.app_data.code_editor.code.clone());
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        }
                     }
-                    }
-                    if open.clicked() || oinput && has_focus && ctrlinput {
+                    if open.clicked() {
                         //self.app_data.can_open = false;
-                        let files = FileDialog::new()
+                            let files = FileDialog::new()
                             .set_title("Open")
                             .set_directory("/")
                             .pick_file();
@@ -382,10 +375,10 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                         }
                     }
-                    if save.clicked() || sinput && has_focus && ctrlinput {
+                    if save.clicked() {
                         if self.app_data.last_save_path.clone().is_none() {
                             let files = FileDialog::new()
-                                .set_title("Save as")
+                                .set_title("Save")
                                 .set_directory("/")
                                 .save_file();
                             self.app_data.last_save_path = files.clone();
@@ -396,19 +389,79 @@ impl eframe::App for AppData {
                             self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                         }
                     }
-                    if save_as.clicked() || minput && has_focus && ctrlinput{
+                    if save_as.clicked() {
+                        self.app_data.code_editor.code.clear();
                         self.app_data.can_save_as = false;
                         let files = FileDialog::new()
-                            .set_title("Save as")
+                        .set_title("Save as")
+                        .set_directory("/")
+                        .save_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                    }
+                    if settings.clicked() {
+                        self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
+                        if self.tree.find_tab(&5).is_none() {
+                            self.tree.push_to_first_leaf(5);
+                        };
+                    }
+                    return (new, open, save, save_as, settings);
+                });              
+
+                if ninput && has_focus && ctrlinput{
+                    self.app_data.code_editor.code.clear();
+                    self.app_data.can_save_as = false;
+                    let files = FileDialog::new()
+                        .set_title("Save as")
+                        .set_directory("/")
+                        .save_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                }
+                if oinput && has_focus && ctrlinput {
+                    //self.app_data.can_open = false;
+                    let files = FileDialog::new()
+                        .set_title("Open")
+                        .set_directory("/")
+                        .pick_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                }
+                if sinput && has_focus && ctrlinput {
+                    if self.app_data.last_save_path.clone().is_none() {
+                        let files = FileDialog::new()
+                            .set_title("Save")
                             .set_directory("/")
                             .save_file();
-                        if files.clone().is_some() {
-                            self.app_data.last_save_path = files.clone();
-                            savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                        }
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
+                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
                     }
-                });
+                }
+                if minput && has_focus && ctrlinput{
+                    self.app_data.can_save_as = false;
+                    let files = FileDialog::new()
+                        .set_title("Save as")
+                        .set_directory("/")
+                        .save_file();
+                    if files.clone().is_some() {
+                        self.app_data.last_save_path = files.clone();
+                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                    }
+                }
                 
                 let edit = ui.menu_button("Edit", |ui| {
                     let copy = ui.button("Copy").on_hover_text("CTRL + C");
@@ -437,14 +490,20 @@ impl eframe::App for AppData {
                     if select_all.clicked() {
 
                     }
-                    if find.clicked() || finput && has_focus && ctrlinput {
+                    if find.clicked() {
                         self.app_data.finder_is_open = !self.app_data.finder_is_open;
                         if self.tree.find_tab(&3).is_none() {
                             self.tree.push_to_first_leaf(3);
                         };
                     }
+                    return (copy, paste, cut, undo, redo, select_all, find);
                 });
-
+                if finput && has_focus && ctrlinput {
+                    self.app_data.finder_is_open = !self.app_data.finder_is_open;
+                    if self.tree.find_tab(&3).is_none() {
+                        self.tree.push_to_first_leaf(3);
+                    };
+                }
                 //code
                 let run = ui.button("Run").on_hover_text("CTRL + R");
                 if run.clicked() || rinput && has_focus && ctrlinput {
@@ -742,7 +801,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                             let px = ui.fonts(|f| f.row_height(&egui::FontId { size: 10.0, family: egui::FontFamily::Monospace }));
                             occurence = occur.as_ref().unwrap()[0];
                             self.data.scroll_offset[1] = occurence as f32 * px;
-                            dbg!(self.data.scroll_offset[1]);
+                            
                             self.data.occurences = occur.unwrap().len();
                             self.data.is_found = Some(true);
                         }
