@@ -1,7 +1,7 @@
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 
-use egui::{Rounding, Stroke, Layout, Response};
+use egui::{Rounding, Stroke, Layout, Response, Visuals};
 use egui::{Color32, RichText, TextBuffer, Vec2};
 
 use egui_terminal::term::CommandBuilder;
@@ -860,7 +860,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 });
         }
         else if *tab == 4 {
+            ui.label(RichText::from("Output").size(20.).color(Color32::GRAY));
             
+            ui.label(RichText::from(self.data.output.clone()).size(30.));
         }
         else if *tab == 5 {
                     ui.label(RichText::from("Application").size(20.0));
@@ -1064,6 +1066,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 
                         };
                     });
+                    ui.separator();
+                    ui.label(RichText::from("Visuals").size(20.0));
+                    egui::widgets::global_dark_light_mode_switch(ui);
         }
         else {
             //infinite terminals
