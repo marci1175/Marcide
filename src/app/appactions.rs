@@ -1,12 +1,16 @@
-use std::path::PathBuf;
 use rfd::FileDialog;
+use std::path::PathBuf;
 
+use super::{
+    cmdmod::{finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr},
+    code_editor,
+};
 
-use super::{cmdmod::{
-    finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr
-}, code_editor};
-
-pub fn savef(mut last_save_path : Option<PathBuf>, text_to_save : String, mut code_editor_text_lenght : usize) -> usize {
+pub fn savef(
+    mut last_save_path: Option<PathBuf>,
+    text_to_save: String,
+    mut code_editor_text_lenght: usize,
+) -> usize {
     if last_save_path.clone().is_none() {
         let files = FileDialog::new()
             .set_title("Save")
@@ -22,7 +26,11 @@ pub fn savef(mut last_save_path : Option<PathBuf>, text_to_save : String, mut co
     return code_editor_text_lenght;
 }
 
-pub fn openf(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght : usize, mut code_editor_code : String) -> (usize, String, Option<PathBuf>) {
+pub fn openf(
+    mut last_save_path: Option<PathBuf>,
+    mut code_editor_text_lenght: usize,
+    mut code_editor_code: String,
+) -> (usize, String, Option<PathBuf>) {
     let files = FileDialog::new()
         .set_title("Open")
         .set_directory("/")
@@ -33,13 +41,16 @@ pub fn openf(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght :
         code_editor_text_lenght = code_editor_code.len();
 
         return (code_editor_text_lenght, code_editor_code, last_save_path);
-    }
-    else {
+    } else {
         return (code_editor_text_lenght, code_editor_code, last_save_path);
     }
 }
 
-pub fn savefas(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght : Option<usize>,mut code_editor_code : String) -> (Option<usize>, Option<PathBuf>) {
+pub fn savefas(
+    mut last_save_path: Option<PathBuf>,
+    mut code_editor_text_lenght: Option<usize>,
+    mut code_editor_code: String,
+) -> (Option<usize>, Option<PathBuf>) {
     let mut code_editor_text_lenght = code_editor_text_lenght.unwrap();
     let files = FileDialog::new()
         .set_title("Save as")
@@ -50,8 +61,7 @@ pub fn savefas(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght
         savetofile(files.clone(), code_editor_code.clone());
         code_editor_text_lenght = code_editor_code.len();
         return (Some(code_editor_text_lenght), last_save_path);
-    }
-    else {
-        return (None,None);
+    } else {
+        return (None, None);
     }
 }

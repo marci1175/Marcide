@@ -15,7 +15,7 @@ pub fn terminalr(path: Option<PathBuf>) -> std::process::Output {
         .output();
     match cmdcomm {
         Ok(mut ok) => {
-            if ok.stdout.len() == 0 {
+            if ok.stdout.is_empty() {
                 ok.stdout = ok.stderr.clone();
             };
             ok
@@ -104,7 +104,7 @@ pub fn runfile(path: Option<PathBuf>, mut language: String) -> std::process::Out
         .output();
     match cmdcomm {
         Ok(mut ok) => {
-            if ok.stdout.len() == 0 {
+            if ok.stdout.is_empty() {
                 ok.stdout = ok.stderr.clone();
             };
             ok

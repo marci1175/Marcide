@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
-use egui::{FontId, FontFamily, Pos2, pos2, Rect};
 use egui::text::LayoutJob;
-use egui::{vec2, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2, Align};
+use egui::{pos2, FontFamily, FontId, Pos2, Rect};
+use egui::{vec2, Align, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
 
 use serde::{Deserialize, Serialize};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
@@ -276,7 +276,7 @@ impl CodeEditor {
             quote_is_held: _,
             sbracket_is_held: _,
         } = self;
-        
+
         let rect_size = ui.available_size();
         let rect_pos = pos2(10., 20.);
         let rect = Rect::from_min_size(rect_pos, rect_size);
@@ -291,16 +291,16 @@ impl CodeEditor {
             //ui.fonts().layout_job(layout_job)
             ui.fonts(|fonts| fonts.layout_job(layout_job))
         };
-        
+
         ui.allocate_space(ui.available_size());
-         
+
         ui.painter().rect(
             frame_rect,
             Rounding::same(5.0),
             Color32::BLACK,
             Stroke::NONE,
         );
-        
+
         let mut frame_ui = ui.child_ui(code_rect, Layout::default());
 
         // get how many rows it takes to fill up our max rect
@@ -314,7 +314,10 @@ impl CodeEditor {
         }
         */
         let text_widget = egui::TextEdit::multiline(code)
-            .font(FontSelection::FontId(FontId::new(10.0, FontFamily::Monospace))) // for cursor height
+            .font(FontSelection::FontId(FontId::new(
+                10.0,
+                FontFamily::Monospace,
+            ))) // for cursor height
             .code_editor()
             // remove the frame and draw our own
             .frame(false)
@@ -323,34 +326,34 @@ impl CodeEditor {
             .layouter(&mut layouter)
             .id(id)
             .desired_rows(rows);
-        
+
         let mut scroll_res = egui::ScrollArea::vertical()
             .id_source("code editor")
             .stick_to_bottom(true)
             .scroll_offset(scroll_offset)
             .show(&mut frame_ui, |ui| {
-                ui.with_layout(Layout::left_to_right(Align::Min), |ui|{
+                ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
                     let mut numbers: String = String::new();
                     for i in 1..=code_ref.clone().lines().count() {
                         numbers.push_str(&i.to_string());
                         numbers.push('\n');
                     }
-                    
-                    ui.allocate_ui(vec2(25., row_height), |ui|{
-                        ui.add(egui::Label::new(egui::RichText::from(numbers.to_string()).font(FontId::new(12., FontFamily::Monospace))));
+
+                    ui.allocate_ui(vec2(25., row_height), |ui| {
+                        ui.add(egui::Label::new(
+                            egui::RichText::from(numbers.to_string())
+                                .font(FontId::new(12., FontFamily::Monospace)),
+                        ));
                     });
-                    
+
                     ui.add(text_widget);
-                    
                 });
-                
-                
             });
         //finder is on
         if go_to_offset {
-            scroll_res.state.offset[1] = scroll_offset.clone()[1] * row_height;
+            scroll_res.state.offset[1] = scroll_offset[1] * row_height;
         }
-        
+
         let eightinput = unsafe { GetAsyncKeyState(VK_8 as i32) };
         let eight_is_pressed = (eightinput as u16 & 0x8000) != 0;
         let twoinput = unsafe { GetAsyncKeyState(VK_2 as i32) };
@@ -450,8 +453,7 @@ impl CodeEditor {
                 };
             }
         }
-         
+
         scroll_res.state.offset
-        
     }
 }
