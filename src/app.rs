@@ -1,3 +1,5 @@
+use crate::app::appactions::{openf, savefas};
+
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 
@@ -31,9 +33,13 @@ mod terminal;
 mod cmdmod;
 mod code_editor;
 mod richpresence;
+mod appactions;
 
 use cmdmod::{
     finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr
+};
+use appactions::{
+    savef,
 };
 
 use egui_dock::{DockArea, NodeIndex, Style, Tree};
@@ -351,56 +357,35 @@ impl eframe::App for AppData {
                     ui.checkbox(&mut self.app_data.auto_save, "Auto save");
                     let settings = ui.button("Settings");
                     if new.clicked() {
-                        self.app_data.code_editor.code.clear();
-                        self.app_data.can_save_as = false;
-                        let files = FileDialog::new()
-                            .set_title("Save as")
-                            .set_directory("/")
-                            .save_file();
-                        if files.clone().is_some() {
-                            self.app_data.last_save_path = files.clone();
-                            savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
+                        let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
+                        if y.is_some() && z.is_some() {
+                            self.app_data.code_editor.code.clear();
+                            self.app_data.can_save_as = false;
+                        }
+                        else {
+                            //aborted save
                         }
                     }
                     if open.clicked() {
-                        //self.app_data.can_open = false;
-                            let files = FileDialog::new()
-                            .set_title("Open")
-                            .set_directory("/")
-                            .pick_file();
-                        if files.clone().is_some() {
-                            self.app_data.last_save_path = files.clone();
-                            self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
-                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                        }
+                        let (x ,y,z) = openf(self.app_data.last_save_path.clone(), self.app_data.code_editor_text_lenght, self.app_data.code_editor.code.clone());
+                        self.app_data.code_editor_text_lenght = x;
+                        self.app_data.code_editor.code = y;
+                        self.app_data.last_save_path = z;
                     }
                     if save.clicked() {
-                        if self.app_data.last_save_path.clone().is_none() {
-                            let files = FileDialog::new()
-                                .set_title("Save")
-                                .set_directory("/")
-                                .save_file();
-                            self.app_data.last_save_path = files.clone();
-                            savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                        } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
-                            savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                            self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                        }
+                        self.app_data.code_editor_text_lenght = savef(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone(), self.app_data.code_editor_text_lenght);
                     }
                     if save_as.clicked() {
-                        self.app_data.code_editor.code.clear();
-                        self.app_data.can_save_as = false;
-                        let files = FileDialog::new()
-                        .set_title("Save as")
-                        .set_directory("/")
-                        .save_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                        let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
+                        if y.is_some() && z.is_some() {
+                            self.app_data.can_save_as = false;
+                            self.app_data.code_editor_text_lenght = y.unwrap();
+                            self.app_data.last_save_path = z;
+                        }
+                        else {
+                            //aborted save
+                        }
+                        
                     }
                     if settings.clicked() {
                         self.app_data.settings_window_is_open = !self.app_data.settings_window_is_open;
@@ -412,55 +397,35 @@ impl eframe::App for AppData {
                 });              
 
                 if ninput && has_focus && ctrlinput{
-                    self.app_data.code_editor.code.clear();
-                    self.app_data.can_save_as = false;
-                    let files = FileDialog::new()
-                        .set_title("Save as")
-                        .set_directory("/")
-                        .save_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
+                        if y.is_some() && z.is_some() {
+                            self.app_data.code_editor.code.clear();
+                            self.app_data.can_save_as = false;
+                        }
+                        else {
+                            //aborted save
+                        }
                 }
                 if oinput && has_focus && ctrlinput {
                     //self.app_data.can_open = false;
-                    let files = FileDialog::new()
-                        .set_title("Open")
-                        .set_directory("/")
-                        .pick_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        self.app_data.code_editor.code = openfile(self.app_data.last_save_path.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    let (x ,y,z) = openf(self.app_data.last_save_path.clone(), self.app_data.code_editor_text_lenght, self.app_data.code_editor.code.clone());
+                    self.app_data.code_editor_text_lenght = x;
+                    self.app_data.code_editor.code = y;
+                    self.app_data.last_save_path = z;
                 }
                 if sinput && has_focus && ctrlinput {
-                    if self.app_data.last_save_path.clone().is_none() {
-                        let files = FileDialog::new()
-                            .set_title("Save")
-                            .set_directory("/")
-                            .save_file();
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    } else if self.app_data.code_editor_text_lenght <= self.app_data.code_editor.code.len() {
-                        savetofile(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    self.app_data.code_editor_text_lenght = savef(self.app_data.last_save_path.clone(), self.app_data.code_editor.code.clone(), self.app_data.code_editor_text_lenght);
                 }
                 if minput && has_focus && ctrlinput{
-                    self.app_data.can_save_as = false;
-                    let files = FileDialog::new()
-                        .set_title("Save as")
-                        .set_directory("/")
-                        .save_file();
-                    if files.clone().is_some() {
-                        self.app_data.last_save_path = files.clone();
-                        savetofile(files.clone(), self.app_data.code_editor.code.clone());
-                        self.app_data.code_editor_text_lenght = self.app_data.code_editor.code.len();
-                    }
+                    let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
+                        if y.is_some() && z.is_some() {
+                            self.app_data.can_save_as = false;
+                            self.app_data.code_editor_text_lenght = y.unwrap();
+                            self.app_data.last_save_path = z;
+                        }
+                        else {
+                            //aborted save
+                        }
                 }
                 
                 let edit = ui.menu_button("Edit", |ui| {
@@ -677,10 +642,6 @@ impl eframe::App for AppData {
     }
 }
 
-
-    /*fn on_add(&mut self, node: NodeIndex) {
-        self.added_nodes.push(node);
-    }*/
 
 fn count_lines(text: &str) -> usize {
     text.split('\n').count()
