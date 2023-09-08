@@ -39,7 +39,7 @@ pub fn openf(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght :
     }
 }
 
-pub fn savefas(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght : Option<usize>, mut code_editor_code : String) -> (Option<usize>, Option<PathBuf>) {
+pub fn savefas(mut last_save_path : Option<PathBuf>, mut code_editor_text_lenght : Option<usize>,mut code_editor_code : String) -> (Option<usize>, Option<PathBuf>) {
     let mut code_editor_text_lenght = code_editor_text_lenght.unwrap();
     let files = FileDialog::new()
         .set_title("Save as")

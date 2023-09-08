@@ -1,5 +1,3 @@
-use crate::app::appactions::{openf, savefas};
-
 use self::code_editor::CodeEditor;
 use dirs::home_dir;
 
@@ -39,7 +37,7 @@ use cmdmod::{
     finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr
 };
 use appactions::{
-    savef,
+    savef, openf, savefas, 
 };
 
 use egui_dock::{DockArea, NodeIndex, Style, Tree};
@@ -304,11 +302,10 @@ impl eframe::App for AppData {
         
         let has_focus = ctx.input(|i| i.focused);
         let ctrlinput = unsafe { GetAsyncKeyState(VK_CONTROL as i32) as u16 & 0x8000 != 0};
-        let f11input = unsafe { (GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000) != 0 };
+        let f11input = unsafe { GetAsyncKeyState(VK_F11 as i32) as u16 & 0x8000 != 0 };
         let sinput = unsafe { GetAsyncKeyState(VK_S as i32) as u16 & 0x8000 != 0};
         let finput = unsafe { GetAsyncKeyState(VK_F as i32) as u16 & 0x8000 != 0};
         let minput = unsafe { GetAsyncKeyState(VK_M as i32) as u16 & 0x8000 != 0};
-        dbg!(minput);
 
         let mut added_nodes = Vec::new();
             let tx = self.app_data.autosave_sender.get_or_insert_with(|| {
@@ -359,6 +356,8 @@ impl eframe::App for AppData {
                     if new.clicked() {
                         let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
                         if y.is_some() && z.is_some() {
+                            self.app_data.code_editor_text_lenght = y.unwrap();
+                            self.app_data.last_save_path = z;
                             self.app_data.code_editor.code.clear();
                             self.app_data.can_save_as = false;
                         }
@@ -399,6 +398,8 @@ impl eframe::App for AppData {
                 if ninput && has_focus && ctrlinput{
                     let (y,z) = savefas(self.app_data.last_save_path.clone(), Some(self.app_data.code_editor_text_lenght), self.app_data.code_editor.code.clone());
                         if y.is_some() && z.is_some() {
+                            self.app_data.code_editor_text_lenght = y.unwrap();
+                            self.app_data.last_save_path = z;
                             self.app_data.code_editor.code.clear();
                             self.app_data.can_save_as = false;
                         }
@@ -695,7 +696,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             }
             Err(_) => { /*Task didnt finsih yet*/ }
         };
-        let _projname: String = self.data.opened_file.clone();
+        
         let starttime: String = self.data.session_started.format("%m-%d %H:%M:%S").to_string();
         let tx = self.data.rpc_sender.get_or_insert_with(|| {
             let (tx, rx) = mpsc::channel::<String>();
