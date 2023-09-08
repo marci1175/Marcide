@@ -343,8 +343,27 @@ impl eframe::App for AppData {
                     let open = ui.button("Open").on_hover_text("CTRL + O");
                     let save = ui.button("Save").on_hover_text("CTRL + S");
                     let save_as = ui.button("Save as").on_hover_text("CTRL + M");
+                    ui.separator();
+                    let save_workspace = ui.button("Save workspace");
+                    let open_workspace = ui.button("Open workspace");
+                    ui.separator();
                     ui.checkbox(&mut self.app_data.auto_save, "Auto save");
                     let settings = ui.button("Settings");
+                    if save_workspace.clicked() {
+                        let mut data_to_write : Vec<String> = Vec::new();
+                        data_to_write.push(self.app_data.code_editor.language.clone() + ";");
+                        data_to_write.push(self.app_data.code_editor_text_lenght.to_string() + ";");
+                        data_to_write.push(self.app_data.last_save_path.clone().unwrap().display().to_string() + ";");
+                        data_to_write.push(self.app_data.code_editor.code.clone() + ";");
+                        let file = FileDialog::new()
+                            .add_filter(&"marcide workspace", &["mwork-space"])
+                            .set_title("Open marcide workspace")
+                            .save_file();
+                        if file.is_some() {
+                            let mut data_to_write = data_to_write.join("");
+                            savef(file, data_to_write, self.app_data.code_editor_text_lenght);
+                        }
+                    }
                     if new.clicked() {
                         let (y, z) = savefas(
                             self.app_data.last_save_path.clone(),
@@ -369,6 +388,21 @@ impl eframe::App for AppData {
                         self.app_data.code_editor_text_lenght = x;
                         self.app_data.code_editor.code = y;
                         self.app_data.last_save_path = z;
+                    }
+                    if open_workspace.clicked() {
+                        let file = FileDialog::new()
+                            .add_filter(&"marcide workspace", &["mwork-space"])
+                            .set_title("Open marcide workspace")
+                            .pick_file();
+                        if file.is_some() {
+                            let openedfile = openfile(file.clone());
+                            let items : Vec<&str> = openedfile.split(";").collect();
+                            self.app_data.code_editor.language = items[0].to_string();
+                            self.app_data.code_editor_text_lenght = items[1].parse().unwrap();
+                            self.app_data.last_save_path = Some(PathBuf::from(items[2]));
+                            self.app_data.code_editor.code = items[3].to_string();
+                        }
+                            
                     }
                     if save.clicked() {
                         self.app_data.code_editor_text_lenght = savef(
@@ -763,7 +797,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         self.frame
             .set_always_on_top(self.data.window_options_always_on_top);
         //get alt input => if true ctrl => false
-
+        
         if *tab == 3 {
             let occurence: usize;
             ui.label("Finder");
