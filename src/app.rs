@@ -995,7 +995,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                         .save_file();
                     if files.clone().is_some() {
                         let config = format!(
-                            "{}\n{}\n{}\n{}\n{}\n{}\n{}\nMARCIDE_CONFIG",
+                            "{}\n{}\n{}\n{}\n{}\n{}\n{}\nMARCIDE_CONFIG\n",
                             self.data.window_options_always_on_top,
                             self.data.auto_save,
                             self.data.auto_save_to_ram,
@@ -1020,7 +1020,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                         self.data.window_options_always_on_top = trueorfalse(lines[0].to_owned());
                         self.data.auto_save = trueorfalse(lines[1].to_owned());
                         self.data.auto_save_to_ram = trueorfalse(lines[2].to_owned());
-                        self.data.language = lines[3].to_owned();
+                        self.data.code_editor.language = lines[3].to_owned();
                         self.data.is_gui_development = trueorfalse(lines[4].to_owned());
                         self.data.terminal_mode = trueorfalse(lines[5].to_owned());
                         self.data.unsafe_mode = trueorfalse(lines[6].to_owned());
