@@ -64,6 +64,7 @@ pub fn savefas(
         return (None, None);
     }
 }
+
 pub fn savefas_w(
     file_dialog_title: &str,
     code_editor_code: String,
@@ -77,6 +78,7 @@ pub fn savefas_w(
         savetofile(files.clone(), code_editor_code.clone());
     }
 }
+
 pub fn openf_w(
     file_dialog_title: &str,
 ) -> Option<String> {

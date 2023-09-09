@@ -375,6 +375,7 @@ impl eframe::App for AppData {
                             savefas_w("Save Marcide workspace as", workspace_final);
                         }
                     }
+                    
                     if open_workspace.clicked() {
                         let file = openf_w("Open Marcide workspace");
                         //let items : Vec<&str> =  file.unwrap().split(";").collect();
@@ -386,6 +387,9 @@ impl eframe::App for AppData {
                                 let path = PathBuf::from(items[2]);
                                 if path.as_path().exists() {
                                     self.app_data.last_save_path = Some(path);
+                                }
+                                else {
+                                    
                                 }
                                 self.app_data.code_editor.code = items[3].to_string();
                             }
