@@ -2,7 +2,7 @@ use self::code_editor::CodeEditor;
 use dirs::home_dir;
 
 use egui::{Color32, RichText, TextBuffer, Vec2};
-use egui::{Layout, Response, Rounding, Stroke, Visuals};
+use egui::{Layout, Rounding, Stroke};
 
 use egui_terminal::term::CommandBuilder;
 use rfd::FileDialog;
@@ -10,8 +10,7 @@ use std::env;
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use syntect::highlighting::Color;
-use termwiz::caps::ColorLevel;
+
 use windows_sys::w;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_F, VK_F11, VK_M, VK_N, VK_O, VK_R, VK_RMENU, VK_S, VK_T,
@@ -22,17 +21,17 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 use winreg::enums::*;
 use winreg::RegKey;
 
-use eframe::{egui, App, CreationContext, Frame};
+use eframe::{egui, Frame};
 use egui_terminal::TermHandler;
 
 //mod gks;
-mod appactions;
+mod file_handling;
 mod cmdmod;
 mod code_editor;
 mod richpresence;
 mod terminal;
 
-use appactions::{openf, savef, savefas};
+use file_handling::{openf, savef, savefas};
 use cmdmod::{finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr};
 
 use egui_dock::{DockArea, NodeIndex, Style, Tree};
@@ -214,12 +213,15 @@ pub struct AppData {
     app_data: TemplateApp,
     #[serde(skip)]
     tree: Tree<usize>,
+    #[serde(skip)]
+    f11_is_held: bool,
 }
 impl Default for AppData {
     fn default() -> Self {
         Self {
             app_data: TemplateApp::default(),
             tree: Tree::new(vec![1, 2, 3]),
+            f11_is_held: false,
         }
     }
 }
@@ -299,6 +301,15 @@ impl eframe::App for AppData {
         let sinput = unsafe { GetAsyncKeyState(VK_S as i32) as u16 & 0x8000 != 0 };
         let finput = unsafe { GetAsyncKeyState(VK_F as i32) as u16 & 0x8000 != 0 };
         let minput = unsafe { GetAsyncKeyState(VK_M as i32) as u16 & 0x8000 != 0 };
+        //set fullscreen
+        if f11input && has_focus && !self.f11_is_held {
+            self.app_data.window_options_full_screen = !self.app_data.window_options_full_screen;
+            self.f11_is_held = true;
+        }
+        //prevent fullscreen spamming
+        if !f11input {
+            self.f11_is_held = false;
+        }
 
         let mut added_nodes = Vec::new();
         let tx = self.app_data.autosave_sender.get_or_insert_with(|| {
@@ -355,14 +366,7 @@ impl eframe::App for AppData {
                         data_to_write.push(self.app_data.code_editor_text_lenght.to_string() + ";");
                         data_to_write.push(self.app_data.last_save_path.clone().unwrap().display().to_string() + ";");
                         data_to_write.push(self.app_data.code_editor.code.clone() + ";");
-                        let file = FileDialog::new()
-                            .add_filter(&"marcide workspace", &["mwork-space"])
-                            .set_title("Open marcide workspace")
-                            .save_file();
-                        if file.is_some() {
-                            let mut data_to_write = data_to_write.join("");
-                            savef(file, data_to_write, self.app_data.code_editor_text_lenght);
-                        }
+                        
                     }
                     if new.clicked() {
                         let (y, z) = savefas(
