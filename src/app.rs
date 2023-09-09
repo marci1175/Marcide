@@ -390,8 +390,8 @@ impl eframe::App for AppData {
                                     self.app_data.last_save_path = Some(path);
                                 }
                                 else {
-                                    custommkdir("%m-workspaces%".to_string());
-                                    self.app_data.last_save_path = Some(PathBuf::from(format!("{}\\%m-workspaces%\\temp.{}", home_dir().unwrap().display() ,self.app_data.code_editor.language)));
+                                    custommkdir("m-workspaces".to_string());
+                                    self.app_data.last_save_path = Some(PathBuf::from(format!("{}\\m-workspaces\\temp.{}", home_dir().unwrap().display() ,self.app_data.code_editor.language)));
                                 }
                                 self.app_data.code_editor.code = items[3].to_string();
                             }
