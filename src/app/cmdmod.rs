@@ -150,3 +150,19 @@ pub fn savetofile(path: Option<PathBuf>, text: String) {
         // Write some data to the file
     }
 }
+pub fn custommkdir(customdir : String) {
+    let mut command = String::new();
+    if let Some(home_dir) = home_dir() {
+        command = format!("mkdir {}\\{}", home_dir.display(), customdir)
+    }
+    let cmdcomm = std::process::Command::new("cmd")
+        .arg("/C")
+        .arg(command)
+        .status();
+    match cmdcomm {
+        Ok(_) => {
+            println!("Failed to excecute command!")
+        }
+        Err(_) => {}
+    }
+}
