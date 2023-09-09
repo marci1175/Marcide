@@ -427,7 +427,7 @@ impl eframe::App for AppData {
                         self.app_data.last_save_path = z;
                     }
                     if save.clicked() {
-                        self.app_data.code_editor_text_lenght = savef(
+                        (self.app_data.code_editor_text_lenght, self.app_data.last_save_path) = savef(
                             self.app_data.last_save_path.clone(),
                             self.app_data.code_editor.code.clone(),
                             self.app_data.code_editor_text_lenght,
@@ -484,7 +484,7 @@ impl eframe::App for AppData {
                     self.app_data.last_save_path = z;
                 }
                 if sinput && has_focus && ctrlinput {
-                    self.app_data.code_editor_text_lenght = savef(
+                    (self.app_data.code_editor_text_lenght, self.app_data.last_save_path) = savef(
                         self.app_data.last_save_path.clone(),
                         self.app_data.code_editor.code.clone(),
                         self.app_data.code_editor_text_lenght,

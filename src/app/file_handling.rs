@@ -1,3 +1,4 @@
+use egui::epaint::tessellator::Path;
 use rfd::FileDialog;
 use std::{path::PathBuf, ffi::OsStr};
 
@@ -9,7 +10,7 @@ pub fn savef(
     mut last_save_path: Option<PathBuf>,
     text_to_save: String,
     mut code_editor_text_lenght: usize,
-) -> usize {
+) -> (usize, Option<PathBuf>) {
     if last_save_path.clone().is_none() {
         let files = FileDialog::new()
             .set_title("Save")
@@ -19,10 +20,10 @@ pub fn savef(
         savetofile(last_save_path.clone(), text_to_save.clone());
         code_editor_text_lenght = text_to_save.len();
     } else if code_editor_text_lenght <= text_to_save.len() {
-        savetofile(last_save_path, text_to_save.clone());
+        savetofile(last_save_path.clone(), text_to_save.clone());
         code_editor_text_lenght = text_to_save.len();
     }
-    return code_editor_text_lenght;
+    return (code_editor_text_lenght, last_save_path);
 }
 
 pub fn openf(
