@@ -2,8 +2,7 @@ use rfd::FileDialog;
 use std::path::PathBuf;
 
 use super::{
-    cmdmod::{finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr},
-    code_editor,
+    cmdmod::{openfile, savetofile},
 };
 
 pub fn savef(
@@ -66,8 +65,8 @@ pub fn savefas(
     }
 }
 pub fn savefas_w(
-    mut file_dialog_title: &str,
-    mut code_editor_code: String,
+    file_dialog_title: &str,
+    code_editor_code: String,
 ) {
     let files = FileDialog::new()
         .set_title(&file_dialog_title)
@@ -79,7 +78,7 @@ pub fn savefas_w(
     }
 }
 pub fn openf_w(
-    mut file_dialog_title: &str,
+    file_dialog_title: &str,
 ) -> Option<String> {
     let files = FileDialog::new()
         .set_title(&file_dialog_title)

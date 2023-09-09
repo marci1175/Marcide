@@ -354,7 +354,7 @@ impl eframe::App for AppData {
         egui::TopBottomPanel::new(egui::panel::TopBottomSide::Top, "settings").show(ctx, |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                 //define buttons
-                let file = ui.menu_button("File", |ui| {
+                let _ = ui.menu_button("File", |ui| {
                     let new = ui.button("New").on_hover_text("CTRL + N");
                     let open = ui.button("Open").on_hover_text("CTRL + O");
                     let save = ui.button("Save").on_hover_text("CTRL + S");
@@ -446,7 +446,7 @@ impl eframe::App for AppData {
                         };
                     }
                     return (new, open, save, save_as, settings);
-                });
+                });   
 
                 if ninput && has_focus && ctrlinput {
                     let (y, z) = savefas(
@@ -496,7 +496,7 @@ impl eframe::App for AppData {
                     }
                 }
 
-                let edit = ui.menu_button("Edit", |ui| {
+                let _ = ui.menu_button("Edit", |ui| {
                     let copy = ui.button("Copy").on_hover_text("CTRL + C");
                     let paste = ui.button("Paste").on_hover_text("CTRL + V");
                     let cut = ui.button("Cut").on_hover_text("CTRL + X");
@@ -518,6 +518,7 @@ impl eframe::App for AppData {
                         };
                     }
                     return (copy, paste, cut, undo, redo, select_all, find);
+                
                 });
                 if finput && has_focus && ctrlinput {
                     self.app_data.finder_is_open = !self.app_data.finder_is_open;
@@ -540,6 +541,7 @@ impl eframe::App for AppData {
                         self.app_data.can_run = false;
                         //save to temp folder
                         if self.app_data.last_save_path.is_none() {
+
                             mkdir();
 
                             //C:\Users\%user_name%\marcide.temp
@@ -559,7 +561,8 @@ impl eframe::App for AppData {
                                 // Set the files variable
                                 let files: Option<PathBuf> = Some(home_dir);
                                 //save file
-                                savetofile(files.clone(), self.app_data.text.clone());
+                                
+                                savetofile(files.clone(), self.app_data.code_editor.code.clone());
                                 //run file
 
                                 let lang = self.app_data.language.clone();
@@ -720,7 +723,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         //reset find state
         self.data.go_to_offset = false;
-
+        
         //rest of the app
         self.data.window_size = self.frame.info().window_info.size;
         const ICON_BYTES: &[u8] = include_bytes!("../icon.ico");
