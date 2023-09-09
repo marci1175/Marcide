@@ -101,7 +101,7 @@ pub struct TemplateApp {
     language: String,
 
     terminal_mode: bool,
-
+    #[serde(skip)]
     code_editor: CodeEditor,
 
     #[serde(skip)]
