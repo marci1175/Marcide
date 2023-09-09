@@ -370,8 +370,8 @@ impl eframe::App for AppData {
                             data_to_write.push(self.app_data.last_save_path.clone().unwrap().display().to_string() + ";");
                             data_to_write.push(self.app_data.code_editor.code.clone() + ";");
                             //protection
-                            let workspace_final = data_to_write.join("");
                             data_to_write.push("MARCIDE_WORKSPACE;".to_string());
+                            let workspace_final = data_to_write.join("");
                             savefas_w("Save Marcide workspace as", workspace_final);
                         }
                     }
@@ -383,7 +383,10 @@ impl eframe::App for AppData {
                             if items[4] == "MARCIDE_WORKSPACE" {
                                 self.app_data.code_editor.language = items[0].to_string();
                                 self.app_data.code_editor_text_lenght = items[1].parse().unwrap();
-                                self.app_data.last_save_path = Some(PathBuf::from(items[2]));
+                                let path = PathBuf::from(items[2]);
+                                if path.as_path().exists() {
+                                    self.app_data.last_save_path = Some(path);
+                                }
                                 self.app_data.code_editor.code = items[3].to_string();
                             }
                         }
@@ -561,7 +564,7 @@ impl eframe::App for AppData {
                                 // Set the files variable
                                 let files: Option<PathBuf> = Some(home_dir);
                                 //save file
-                                
+
                                 savetofile(files.clone(), self.app_data.code_editor.code.clone());
                                 //run file
 
@@ -889,7 +892,6 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 .show(&mut frame_ui, |ui| {
                     ui.add(terminal::new(
                         &mut self.data.terminal_terminal_style,
-                        ui.available_size(),
                     ));
                 });
         } else if *tab == 4 {

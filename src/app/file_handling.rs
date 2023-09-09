@@ -1,8 +1,8 @@
 use rfd::FileDialog;
 use std::path::PathBuf;
 
-use super::{
-    cmdmod::{openfile, savetofile},
+use super::cmdmod::{
+    openfile, savetofile
 };
 
 pub fn savef(
@@ -48,9 +48,9 @@ pub fn openf(
 pub fn savefas(
     mut last_save_path: Option<PathBuf>,
     mut code_editor_text_lenght: Option<usize>,
-    mut code_editor_code: String,
+    code_editor_code: String,
 ) -> (Option<usize>, Option<PathBuf>) {
-    let mut code_editor_text_lenght = code_editor_text_lenght.unwrap();
+    
     let files = FileDialog::new()
         .set_title("Save as")
         .set_directory("/")
@@ -58,8 +58,8 @@ pub fn savefas(
     if files.clone().is_some() {
         last_save_path = files.clone();
         savetofile(files.clone(), code_editor_code.clone());
-        code_editor_text_lenght = code_editor_code.len();
-        return (Some(code_editor_text_lenght), last_save_path);
+        code_editor_text_lenght = Some(code_editor_code.len());
+        return ((code_editor_text_lenght), last_save_path);
     } else {
         return (None, None);
     }

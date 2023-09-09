@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 use egui::text::LayoutJob;
-use egui::{pos2, FontFamily, FontId, Pos2, Rect};
+use egui::{pos2, FontFamily, FontId};
 use egui::{vec2, Align, Color32, FontSelection, Id, Layout, Rounding, Stroke, Vec2};
 
 use serde::{Deserialize, Serialize};
@@ -265,7 +265,7 @@ impl CodeEditor {
         &mut self,
         id: Id,
         ui: &mut egui::Ui,
-        mut scroll_offset: Vec2,
+        scroll_offset: Vec2,
         go_to_offset: bool,
     ) -> Vec2 {
         let Self {
@@ -279,7 +279,7 @@ impl CodeEditor {
 
         let rect_size = ui.available_size();
         let rect_pos = pos2(10., 20.);
-        let rect = Rect::from_min_size(rect_pos, rect_size);
+        //let rect = Rect::from_min_size(rect_pos, rect_size);
 
         let frame_rect = ui.max_rect().shrink(5.0);
         let code_rect = frame_rect.shrink(10.0);
