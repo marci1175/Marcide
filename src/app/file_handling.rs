@@ -1,5 +1,5 @@
 use rfd::FileDialog;
-use std::path::PathBuf;
+use std::{path::PathBuf, ffi::OsStr};
 
 use super::cmdmod::{
     openfile, savetofile
@@ -79,18 +79,18 @@ pub fn savefas_w(
     }
 }
 
-pub fn openf_w(
-    file_dialog_title: &str,
-) -> Option<String> {
+pub fn openf_w(file_dialog_title: &str) -> (Option<String>, Option<String>) {
     let files = FileDialog::new()
-        .set_title(&file_dialog_title)
+        .set_title(file_dialog_title)
         .set_directory("/")
         .add_filter("Marcide workspace", &["m-workspace"])
         .pick_file();
-    if files.clone().is_some() {
-        let code_editor_code = openfile(files.clone());
-        return Some(code_editor_code);
+
+    if let Some(files) = files {
+        let code_editor_code = openfile(Some(files.clone()));
+        //excetution date 2024 13 69
+        return (Some(code_editor_code), Some(files.file_name().to_owned().unwrap().to_string_lossy().to_string()));
     } else {
-        return None;
+        return (None, None);
     }
 }

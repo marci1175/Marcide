@@ -378,7 +378,7 @@ impl eframe::App for AppData {
                     }
                     
                     if open_workspace.clicked() {
-                        let file = openf_w("Open Marcide workspace");
+                        let (file, filename) = openf_w("Open Marcide workspace");
                         //let items : Vec<&str> =  file.unwrap().split(";").collect();
                         if let Some(items) = file {
                             let items = items.split(";").collect::<Vec<&str>>();
@@ -391,7 +391,7 @@ impl eframe::App for AppData {
                                 }
                                 else {
                                     custommkdir("m-workspaces".to_string());
-                                    self.app_data.last_save_path = Some(PathBuf::from(format!("{}\\m-workspaces\\temp.{}", home_dir().unwrap().display() ,self.app_data.code_editor.language)));
+                                    self.app_data.last_save_path = Some(PathBuf::from(format!("{}\\m-workspaces\\{}.{}", home_dir().unwrap().display() , filename.unwrap() ,self.app_data.code_editor.language)));
                                 }
                                 self.app_data.code_editor.code = items[3].to_string();
                             }
