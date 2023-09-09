@@ -65,3 +65,31 @@ pub fn savefas(
         return (None, None);
     }
 }
+pub fn savefas_w(
+    mut file_dialog_title: &str,
+    mut code_editor_code: String,
+) {
+    let files = FileDialog::new()
+        .set_title(&file_dialog_title)
+        .set_directory("/")
+        .add_filter("Marcide workspace", &["m-workspace"])
+        .save_file();
+    if files.clone().is_some() {
+        savetofile(files.clone(), code_editor_code.clone());
+    }
+}
+pub fn openf_w(
+    mut file_dialog_title: &str,
+) -> Option<String> {
+    let files = FileDialog::new()
+        .set_title(&file_dialog_title)
+        .set_directory("/")
+        .add_filter("Marcide workspace", &["m-workspace"])
+        .pick_file();
+    if files.clone().is_some() {
+        let code_editor_code = openfile(files.clone());
+        return Some(code_editor_code);
+    } else {
+        return None;
+    }
+}

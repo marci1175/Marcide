@@ -15,7 +15,7 @@ pub async fn rpc(projstart: String) -> Result<(), anyhow::Error> {
     });
 
     let rp = ds::activity::ActivityBuilder::default()
-        .details("Version : 3 ")
+        .details("Version : 3.0.0 ")
         .state(format!("Session started : {}", projstart).to_owned())
         .assets(ds::activity::Assets::default().large(
             "dsicordmariced".to_owned(),

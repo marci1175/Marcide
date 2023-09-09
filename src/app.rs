@@ -1,4 +1,5 @@
 use self::code_editor::CodeEditor;
+
 use dirs::home_dir;
 
 use egui::{Color32, RichText, TextBuffer, Vec2};
@@ -18,8 +19,6 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MessageBoxW, MB_ICONERROR, MB_ICONEXCLAMATION, MB_OK, MB_YESNOCANCEL,
 };
-use winreg::enums::*;
-use winreg::RegKey;
 
 use eframe::{egui, Frame};
 use egui_terminal::TermHandler;
@@ -30,8 +29,14 @@ mod cmdmod;
 mod code_editor;
 mod richpresence;
 mod terminal;
+mod win_handling;
 
-use file_handling::{openf, savef, savefas};
+use win_handling::{
+    add_win_ctx, remove_win_ctx,
+};
+use file_handling::{
+    openf, savef, savefas, savefas_w, openf_w
+};
 use cmdmod::{finder, mkdir, openfile, rmdir, runfile, savetofile, terminalr};
 
 use egui_dock::{DockArea, NodeIndex, Style, Tree};
@@ -355,19 +360,38 @@ impl eframe::App for AppData {
                     let save = ui.button("Save").on_hover_text("CTRL + S");
                     let save_as = ui.button("Save as").on_hover_text("CTRL + M");
                     ui.separator();
-                    let save_workspace = ui.button("Save workspace");
                     let open_workspace = ui.button("Open workspace");
+                    if self.app_data.last_save_path.is_some() {
+                        let save_workspace = ui.button("Save workspace");
+                        if save_workspace.clicked() {
+                            let mut data_to_write : Vec<String> = Vec::new();
+                            data_to_write.push(self.app_data.code_editor.language.clone() + ";");
+                            data_to_write.push(self.app_data.code_editor_text_lenght.to_string() + ";");
+                            data_to_write.push(self.app_data.last_save_path.clone().unwrap().display().to_string() + ";");
+                            data_to_write.push(self.app_data.code_editor.code.clone() + ";");
+                            //protection
+                            let workspace_final = data_to_write.join("");
+                            data_to_write.push("MARCIDE_WORKSPACE;".to_string());
+                            savefas_w("Save Marcide workspace as", workspace_final);
+                        }
+                    }
+                    if open_workspace.clicked() {
+                        let file = openf_w("Open Marcide workspace");
+                        //let items : Vec<&str> =  file.unwrap().split(";").collect();
+                        if let Some(items) = file {
+                            let items = items.split(";").collect::<Vec<&str>>();
+                            if items[4] == "MARCIDE_WORKSPACE" {
+                                self.app_data.code_editor.language = items[0].to_string();
+                                self.app_data.code_editor_text_lenght = items[1].parse().unwrap();
+                                self.app_data.last_save_path = Some(PathBuf::from(items[2]));
+                                self.app_data.code_editor.code = items[3].to_string();
+                            }
+                        }
+                            
+                    }
                     ui.separator();
                     ui.checkbox(&mut self.app_data.auto_save, "Auto save");
                     let settings = ui.button("Settings");
-                    if save_workspace.clicked() {
-                        let mut data_to_write : Vec<String> = Vec::new();
-                        data_to_write.push(self.app_data.code_editor.language.clone() + ";");
-                        data_to_write.push(self.app_data.code_editor_text_lenght.to_string() + ";");
-                        data_to_write.push(self.app_data.last_save_path.clone().unwrap().display().to_string() + ";");
-                        data_to_write.push(self.app_data.code_editor.code.clone() + ";");
-                        
-                    }
                     if new.clicked() {
                         let (y, z) = savefas(
                             self.app_data.last_save_path.clone(),
@@ -392,21 +416,6 @@ impl eframe::App for AppData {
                         self.app_data.code_editor_text_lenght = x;
                         self.app_data.code_editor.code = y;
                         self.app_data.last_save_path = z;
-                    }
-                    if open_workspace.clicked() {
-                        let file = FileDialog::new()
-                            .add_filter(&"marcide workspace", &["mwork-space"])
-                            .set_title("Open marcide workspace")
-                            .pick_file();
-                        if file.is_some() {
-                            let openedfile = openfile(file.clone());
-                            let items : Vec<&str> = openedfile.split(";").collect();
-                            self.app_data.code_editor.language = items[0].to_string();
-                            self.app_data.code_editor_text_lenght = items[1].parse().unwrap();
-                            self.app_data.last_save_path = Some(PathBuf::from(items[2]));
-                            self.app_data.code_editor.code = items[3].to_string();
-                        }
-                            
                     }
                     if save.clicked() {
                         self.app_data.code_editor_text_lenght = savef(
@@ -887,114 +896,12 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         } else if *tab == 5 {
             ui.label(RichText::from("Application").size(20.0));
             if ui.button("Add to windows context menu").clicked() {
-                let path = format!("{}", env::current_dir().unwrap().display());
-                let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-                let environment_key = hklm.open_subkey_with_flags(
-                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-                    KEY_READ | KEY_WRITE,
-                );
-
-                match environment_key {
-                    Ok(key) => {
-                        // Read the existing PATH value
-                        let mut path_value: String = key.get_value("PATH").unwrap_or_default();
-
-                        // Append the new path to the existing value
-                        if !path_value.is_empty() {
-                            path_value.push(';');
-                        }
-                        path_value.push_str(&path);
-
-                        // Set the modified PATH value
-                        key.set_value("PATH", &path_value)
-                            .expect("Failed to set value");
-
-                        // Notify the user about the updated PATH
-                    }
-                    Err(err) => {
-                        eprintln!("Error: {}", err);
-                    }
-                }
-
-                if let Ok(exe_path) = env::current_exe() {
-                    let app_path = exe_path;
-                    let _ = std::process::Command::new("reg")
-                        .args([
-                            "add",
-                            "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide\\command",
-                            "/ve",
-                            "/d",
-                            &format!("\"{}\" \"%1\"", app_path.display()),
-                            "/f",
-                        ])
-                        .output()
-                        .expect("Failed to execute command");
-                    let path = format!(
-                        "C:\\Users\\{}\\AppData\\Roaming\\Marcide\\data\\icon.ico",
-                        env::var("USERNAME").unwrap()
-                    );
-                    let mut output_file =
-                        std::fs::File::create(path).expect("Failed to create file");
-                    io::Write::write_all(&mut output_file, ICON_BYTES)
-                        .expect("Failed to write to file");
-                    let icon_path = format!(
-                        r#""C:\\Users\\{}\\AppData\\Roaming\\Marcide\\data\\icon.ico""#,
-                        env::var("USERNAME").unwrap()
-                    );
-                    let _ = std::process::Command::new("reg")
-                        .args([
-                            "add",
-                            "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
-                            "/v",
-                            "Icon",
-                            "/d",
-                            &icon_path.to_string(),
-                            "/f",
-                        ])
-                        .output()
-                        .expect("Failed to execute command");
-                }
+                add_win_ctx(ICON_BYTES);
             };
             if ui.button("Remove from windows context menu").clicked() {
-                let path = format!("{}", env::current_dir().unwrap().display());
-                let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-                let environment_key = hklm.open_subkey_with_flags(
-                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-                    KEY_READ | KEY_WRITE,
-                );
-
-                match environment_key {
-                    Ok(key) => {
-                        // Read the existing PATH value
-                        let path_value: String = key.get_value("Path").unwrap_or_default();
-
-                        // Split the existing paths by semicolon
-                        let paths: Vec<_> = path_value.split(';').collect();
-
-                        // Create a new PATH value without the path to remove
-                        let new_paths: Vec<_> = paths.into_iter().filter(|&p| p != path).collect();
-                        let new_path_value = new_paths.join(";");
-
-                        // Set the modified PATH value
-                        key.set_value("Path", &new_path_value)
-                            .expect("Failed to set value");
-
-                        // Notify the user about the updated PATH
-                        println!("Updated PATH: {}", new_path_value);
-                    }
-                    Err(err) => {
-                        eprintln!("Error: {}", err);
-                    }
-                }
-                let _ = std::process::Command::new("reg")
-                    .args([
-                        "delete",
-                        "HKEY_CLASSES_ROOT\\*\\shell\\Open file with Marcide",
-                        "/f",
-                    ])
-                    .output()
-                    .expect("Failed to execute command");
+                remove_win_ctx();
             };
+            
             ui.separator();
             ui.label(RichText::from("Window").size(20.0));
             ui.checkbox(&mut self.data.window_options_always_on_top, "Always on top");
@@ -1077,7 +984,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                         .save_file();
                     if files.clone().is_some() {
                         let config = format!(
-                            "{}\n{}\n{}\n{}\n{}\n{}\n{}",
+                            "{}\n{}\n{}\n{}\n{}\n{}\n{}\nMARCIDE_CONFIG",
                             self.data.window_options_always_on_top,
                             self.data.auto_save,
                             self.data.auto_save_to_ram,
@@ -1098,13 +1005,16 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     let contains = openfile(files);
                     let lines: Vec<&str> = contains.lines().collect();
                     //xd
-                    self.data.window_options_always_on_top = trueorfalse(lines[0].to_owned());
-                    self.data.auto_save = trueorfalse(lines[1].to_owned());
-                    self.data.auto_save_to_ram = trueorfalse(lines[2].to_owned());
-                    self.data.language = lines[3].to_owned();
-                    self.data.is_gui_development = trueorfalse(lines[4].to_owned());
-                    self.data.terminal_mode = trueorfalse(lines[5].to_owned());
-                    self.data.unsafe_mode = trueorfalse(lines[6].to_owned());
+                    if lines[7] == "MARCIDE_CONFIG" {
+                        self.data.window_options_always_on_top = trueorfalse(lines[0].to_owned());
+                        self.data.auto_save = trueorfalse(lines[1].to_owned());
+                        self.data.auto_save_to_ram = trueorfalse(lines[2].to_owned());
+                        self.data.language = lines[3].to_owned();
+                        self.data.is_gui_development = trueorfalse(lines[4].to_owned());
+                        self.data.terminal_mode = trueorfalse(lines[5].to_owned());
+                        self.data.unsafe_mode = trueorfalse(lines[6].to_owned());
+                    }
+                    
                 };
             });
             ui.separator();
