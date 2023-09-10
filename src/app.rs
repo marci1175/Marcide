@@ -356,6 +356,11 @@ impl eframe::App for AppData {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                 //define buttons
                 let _ = ui.menu_button("File", |ui| {
+                    if ui.button("Open code editor").clicked() {
+                        if self.tree.find_tab(&2).is_none() {
+                            self.tree.push_to_first_leaf(2);
+                        };
+                    };
                     let new = ui.button("New").on_hover_text("CTRL + N");
                     let open = ui.button("Open").on_hover_text("CTRL + O");
                     let save = ui.button("Save").on_hover_text("CTRL + S");
